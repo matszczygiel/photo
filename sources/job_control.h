@@ -31,6 +31,7 @@ private:
     std::string HF_en_file = "e.dat";
     std::string basis_name;
     std::string CI_file = "ci.dat";
+    std::string res_file = "res.dat";
 
     double ionizatoin_pot;
     double k;

@@ -38,7 +38,7 @@ void JobControl::print() const {
 
 void JobControl::writeRes(double sig) const {
     std::ofstream outfile;
-    outfile.open(data_path + "res.dat", std::ios_base::app);
+    outfile.open(data_path + res_file, std::ios_base::app);
     outfile << std::fixed <<std::setprecision(3) << k <<"\t";
     outfile << std::fixed  <<std::setprecision(3) << photonEeV(k, ionizatoin_pot) << "\t";
     outfile << std::fixed << std::setprecision(4) << sig << "\t\t";
@@ -206,6 +206,9 @@ void JobControl::readInput( std::string in_file ) {
             else if ( key == "SELECTION_METHOD" )
             {
                 ss >> selectionMethod;
+            }
+            else if (key == "WRITE_TO") {
+            	ss >> res_file;
             }
         }
     }
