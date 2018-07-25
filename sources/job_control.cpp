@@ -27,6 +27,8 @@ void JobControl::print() const {
     std::cout << this->getFileNorm() << "\n";
     std::cout << " The text files loaded: \n";
     std::cout << this->getFileHF() << "\n";
+    std::cout << this->getFileHFEnergy() << "\n";
+    std::cout << this->getFileCI() << "\n";
     std::cout << " Ionization potential: " << ionizatoin_pot << "\n";
     std::cout << " Loaded k value: " << k << "\n";
     std::cout << " The He atom energy: " << E_he << "\n\n";
@@ -122,7 +124,7 @@ void JobControl::readInput( std::string in_file ) {
             else if(key == "DATA_PATH")
             {
                 ss >> data_path;
-                data_path = "../data/" + data_path;
+                data_path = "/home/mateusz/Documents/cpp/photo/data/" + data_path;
             }
             else if(key == "ION") {
                 ss >> ask;

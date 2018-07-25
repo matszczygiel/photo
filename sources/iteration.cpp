@@ -201,9 +201,6 @@ Iteration::status Iteration::one_step() {
         }
     }
 
-    if ( !(eval_1 && eval_2) )
-        return finished;
-
     //Check for self consistency
 
     double diff_norm_eq1 = 0.0;
@@ -220,8 +217,21 @@ Iteration::status Iteration::one_step() {
         Coeff_ion = Coeff_ion_dum;
     }
 
+
+    cout << "New continuum: \n";
+    cout << Corr_coef;
+    cout << "\n\n";
+
+    cout << "New bound: \n";
+    cout << Coeff_ion;
+    cout << "\n\n";
+
+
     Cont = U_matrix_1eq * Corr_coef;
     Ion << Coeff_ion, VectorXcd::Zero(b_l - b_nk_l);
+
+    if ( !(eval_1 && eval_2) )
+        return finished;
 
     if(diff_norm_eq1 < treshold && diff_norm_eq2 < treshold)
         return self_consistent;
