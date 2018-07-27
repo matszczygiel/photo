@@ -46,7 +46,8 @@ void JobControl::writeRes(double sig) const {
     outfile << forceOrthogonality << "\t";
     outfile << eq_int << "\t";
     outfile << solveIon << "\t";
-    outfile << selectionMethod << "\n";
+    outfile << selectionMethod << "\t";
+    outfile << gauge << "\n";
     outfile.close();
 }
 
@@ -209,6 +210,9 @@ void JobControl::readInput( std::string in_file ) {
             }
             else if (key == "WRITE_TO") {
             	ss >> res_file;
+            }
+            else if (key == "GAUGE") {
+            	ss >> gauge;
             }
         }
     }

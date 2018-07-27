@@ -43,6 +43,7 @@ private:
     int ion_pot_int;
     int eq_int;
     int selectionMethod;
+    int gauge;
 
     unsigned b_l;
     unsigned b_k_l;
@@ -81,6 +82,7 @@ public:
     bool getIfWrite() const             { return writeResult; }
     bool getSolveIon() const            { return solveIon; }
     int getSelectionMethod() const      { return selectionMethod; }
+    int get_gauge() const 				{ return gauge; }
 
 
     void readInput( std::string in_file );

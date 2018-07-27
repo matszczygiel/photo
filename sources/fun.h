@@ -2,7 +2,6 @@
 #define FUN_H
 
 #include "rec.h"
-#include <lapacke.h>
 #include <iostream>
 #include <cstring>
 #include <complex>

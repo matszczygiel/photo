@@ -1,7 +1,6 @@
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
-#include <lapacke.h>
 #include <fstream>
 #include <cstring>
 #include <string>
