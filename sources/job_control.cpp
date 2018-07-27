@@ -1,5 +1,155 @@
 #include "job_control.h"
 
+Job_control::Job_control(const Input_data& in) {
+	std::string key;
+
+	key = boost::to_lower_copy(in.keys["SOLVE_BOUND"]);
+	if (key == "y")
+		compute_bound = true;
+	else if (key == "n")
+		compute_bound = false;
+	else
+		throw std::runtime_error("Invalid argument for SOLVE_BOUND.");
+
+	key = boost::to_lower_copy(in.keys["SOLVE_CONTINUUM"]);
+	if (key == "y")
+		compute_cont = true;
+	else if (key == "n")
+		compute_cont = false;
+	else
+		throw std::runtime_error("Invalid argument for SOLVE_CONTINUUM.");
+
+	key = boost::to_lower_copy(in.keys["COMPUTE_ION_STATE"]);
+	if (key == "y")
+		compute_ion_state = true;
+	else if (key == "n")
+		compute_ion_state = false;
+	else
+		throw std::runtime_error("Invalid argument for COMPUTE_ION_STATE.");
+
+	key = in.keys["K"];
+	try {
+		k_val = std::stod(key);
+	} catch (std::exception& e) {
+		throw std::runtime_error("Invalid argument for K.");
+	}
+
+	key = in.keys["I_STATE_ENERGY"];
+	try {
+		i_energy = std::stod(key);
+	} catch (std::exception& e) {
+		throw std::runtime_error("Invalid argument for I_STATE_ENERGY.");
+	}
+
+	key = in.keys["F_STATE_ENERGY"];
+	try {
+		f_energy = std::stod(key);
+	} catch (std::exception& e) {
+		throw std::runtime_error("Invalid argument for F_STATE_ENERGY.");
+	}
+
+	data_path = in.keys["DATA_PATH"];
+
+	key = in.keys["BASIS_FILE"];
+	if (boost::to_lower_copy(key) == "auto") {
+		std::stringstream ss;
+		ss << std::fixed << std::setprecision(3) << k_val;
+		basis_file = "He_k" + ss.str() + ".inp";
+	}
+	else
+		basis_file = key;
+
+	key = in.keys["1E_FILE"];
+	if (boost::to_lower_copy(key) == "auto") {
+		std::stringstream ss;
+		ss << std::fixed << std::setprecision(3) << k_val;
+		E1_file = "file1E_He_k" + ss.str() + ".F";
+	} else
+		E1_file = key;
+
+	key = in.keys["2E_FILE"];
+	if (boost::to_lower_copy(key) == "auto") {
+		std::stringstream ss;
+		ss << std::fixed << std::setprecision(3) << k_val;
+		E2_file = "file2E_He_k" + ss.str() + ".F";
+	} else
+		E2_file = key;
+
+	key = in.keys["NORM_FILE"];
+	if (boost::to_lower_copy(key) == "auto") {
+		std::stringstream ss;
+		ss << std::fixed << std::setprecision(3) << k_val;
+		norm_file = "norm1E_He_k" + ss.str() + ".F";
+	} else
+		norm_file = key;
+
+	key = in.keys["HF_VECTORS_FILE"];
+	if (boost::to_lower_copy(key) == "auto") {
+		HFv_file = "c.dat";
+	} else
+		HFv_file = key;
+
+	key = in.keys["CI_FILE"];
+	if (boost::to_lower_copy(key) == "auto") {
+		CI_file = "ci.dat";
+	} else
+		CI_file = key;
+
+	key = boost::to_lower_copy(in.keys["ION_POTENTIAL"]);
+	if (key == "compute")
+		potential = f_energy - i_energy;
+	else
+		try {
+			potential = std::stod(key);
+		} catch (std::exception& e) {
+			throw std::runtime_error("Invalid argument for ION_POTENTIAL.");
+		};
+
+	key = boost::to_lower_copy(in.keys["SELECTION_METHOD"]);
+	if (key == "energy")
+		selection_m = energy;
+	else if (key == "norm")
+		selection_m = norm;
+	else
+		std::runtime_error("Invalid argument for SELECTION_METHOD.");
+
+	key = boost::to_lower_copy(in.keys["FORCE_ORTHOGONALITY"]);
+	if (key == "y")
+		force_orth = true;
+	else if (key == "n")
+		force_orth = false;
+	else
+		throw std::runtime_error("Invalid argument for FORCE_ORTHOGONALITY.");
+
+	key = boost::to_lower_copy(in.keys["GAUGE"]);
+	if (key == "velocity")
+		gauge = velocity;
+	else if (key == "dipole")
+		gauge = dipole;
+	else
+		std::runtime_error("Invalid argument for GAUGE.");
+
+	key = boost::to_lower_copy(in.keys["WRITE"]);
+	if (key == "y")
+		write = true;
+	else if (key == "n")
+		write = false;
+	else
+		throw std::runtime_error("Invalid argument for WRITE.");
+
+	res_file = in.keys["WRITE_FILE"];
+}
+
+
+
+
+
+
+
+
+
+
+
 
 void JobControl::calcualteBasisFunctNumber() {
     l_max = gto_number.size() - 1;

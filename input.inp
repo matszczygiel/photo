@@ -1,0 +1,24 @@
+SOLVE_BOUND		[Y,N] //upper or lower case
+SOLVE_CONTINUUM 	[Y,N] //upper or lower case
+COMPUTE_ION_STATE 	[Y,N] //upper or lower case
+
+K 			1.234
+I_STATE_ENERGY 		-2.665
+F_STATE_ENERGY		-2.0
+
+DATA_PATH 		<path>
+BASIS_FILE		[<name of file>, auto]
+1E_FILE			[<name of file>, auto]
+2E_FILE			[<name of file>, auto]
+NORM_FILE		[<name of file>, auto]
+HF_VECTORS_FILE		[<name of file>, auto]
+CI_FILE			[<name of file>, auto]
+
+ION_POTENTIAL		[compute, 0.64645] //upper or lower case
+SELECTION_METHOD	[energy, norm] //upper or lower case
+FORCE_ORTHOGONALITY	[Y,N] //upper or lower case
+GAUGE			[velocity, dipole] //upper or lower case
+
+WRITE			[Y,N] //upper or lower case
+WRITE_FILE		<name of file>
+
