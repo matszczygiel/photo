@@ -10,6 +10,7 @@
 class Input_data {
 public:
 	std::map<std::string, std::string> keys;
+
 	void read_input(std::ifstream& input_file);
 };
 
