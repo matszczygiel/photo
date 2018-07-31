@@ -7,11 +7,12 @@
 #include <fstream>
 #include <stdexcept>
 
-class Input_data {
-public:
-	std::map<std::string, std::string> keys;
+class Input_data
+{
+  public:
+	void read_input(std::ifstream &input_file);
 
-	void read_input(std::ifstream& input_file);
+	std::map<std::string, std::string> keys;
 };
 
 #endif /* SOURCES_INPUT_DATA_H_ */

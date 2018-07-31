@@ -17,7 +17,7 @@ struct Const_arrays {
 	static constexpr size_t dfact_s = 15;
 	static constexpr size_t binom_s = 30;
 	static constexpr size_t omega_s = 30;
-	static constexpr size_t crt_siz_s = 11;
+	static constexpr size_t crt_siz_s = 9;
 };
 
 #endif // CONSTANTS_H

@@ -36,8 +36,6 @@ using namespace Eigen;
 
 using Cdouble = std::complex<double>;
 
-JobControl jc;
-
 int main(int argc, char* argv[]) {
 	// put a battery in the clock
 	auto start = chrono::system_clock::now();
@@ -48,7 +46,22 @@ int main(int argc, char* argv[]) {
 	}
 
 	string input = argv[1];
-	bool error = false;
+	Job_control jc;
+	Input_data in_data;
+
+	try
+	{
+		std::ifstream ifile(input);
+		if(!ifile.is_open())
+		throw std::runtime_error("Invalid input file parsed.");
+
+		in_data.read_input(ifile);
+		ifile.close();
+
+		jc.read(in_data);
+	}
+
+
 	jc.readInput(input);
 	jc.calcualteBasisFunctNumber();
 	jc.print();
