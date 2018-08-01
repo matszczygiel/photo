@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <stdexcept>
 #include <eigen3/Eigen/Eigenvalues>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/unsupported/Eigen/CXX11/Tensor>
@@ -30,36 +31,53 @@
 #include "job_control.h"
 #include "two_electron_integrals.h"
 #include "iteration.h"
+#include "disk_reader.h"
 
 using namespace std;
 using namespace Eigen;
 
-using Cdouble = std::complex<double>;
 
-int main(int argc, char* argv[]) {
-	// put a battery in the clock
+int main(int argc, char *argv[])
+{
 	auto start = chrono::system_clock::now();
 
-	if (argc != 2) {
+	if (argc != 2)
+	{
 		cout << " Proper usage: ./rec <input name> \n";
 		return EXIT_SUCCESS;
 	}
 
 	string input = argv[1];
-	Job_control jc;
+	Job_control controler;
 	Input_data in_data;
+	Disk_reader reader;
 
 	try
 	{
 		std::ifstream ifile(input);
-		if(!ifile.is_open())
-		throw std::runtime_error("Invalid input file parsed.");
+		if (!ifile.is_open())
+			throw std::runtime_error("Invalid input file parsed.");
 
 		in_data.read_input(ifile);
 		ifile.close();
 
-		jc.read(in_data);
+		controler.read(in_data);
+		reader.initialize(controler);
+		
 	}
+	catch (std::exception& e)
+	{
+		std::cerr << e.what() << "\n";
+		return EXIT_FAILURE;
+	}
+
+
+
+
+
+
+
+
 
 
 	jc.readInput(input);
@@ -78,7 +96,7 @@ int main(int argc, char* argv[]) {
 	///load integrals to memory
 
 	//one-electron integrals
-	Cdouble * one_el;
+	Cdouble *one_el;
 	Get_1E(jc.getFile1E(), one_el, b_l_sqrt, error, false);
 
 	MatrixXcd S_matrix = Map<MatrixXcd>(one_el, b_l, b_l).transpose();
@@ -87,12 +105,14 @@ int main(int argc, char* argv[]) {
 	MatrixXcd Dy_matrix;
 	MatrixXcd Dz_matrix;
 
-	if(jc.get_gauge() == 0) {
+	if (jc.get_gauge() == 0)
+	{
 		Dx_matrix = Map<MatrixXcd>(&one_el[4 * b_l_sqrt], b_l, b_l).transpose();
 		Dy_matrix = Map<MatrixXcd>(&one_el[5 * b_l_sqrt], b_l, b_l).transpose();
 		Dz_matrix = Map<MatrixXcd>(&one_el[6 * b_l_sqrt], b_l, b_l).transpose();
 	}
-	else if (jc.get_gauge() == 1) {
+	else if (jc.get_gauge() == 1)
+	{
 		double multiply = photonEeV(jc.getK(), jc.getIB()) * 0.036749305;
 		Dx_matrix = Map<MatrixXcd>(&one_el[13 * b_l_sqrt], b_l, b_l).transpose() / multiply;
 		Dy_matrix = Map<MatrixXcd>(&one_el[14 * b_l_sqrt], b_l, b_l).transpose() / multiply;
@@ -109,7 +129,7 @@ int main(int argc, char* argv[]) {
 
 	/// import HF orbitlas
 
-	double * HF_coef;
+	double *HF_coef;
 	Get_HF_data(jc.getFileHF(), HF_coef, b_nk_l_sqrt, error, false);
 
 	VectorXd HF_ground = Map<VectorXd>(HF_coef, b_nk_l);
@@ -121,7 +141,7 @@ int main(int argc, char* argv[]) {
 	/// import the continuum coefficients and transforamtion to more direct form
 	//store in the memory as Gamess order
 
-	Cdouble * cont_coef;
+	Cdouble *cont_coef;
 	Prepare_cont_coef(jc.getFileNorm(), cont_coef, jc.getLmax(), b_k_l, b_nk_l, error);
 
 	VectorXcd Cont_coef = Map<VectorXcd>(cont_coef, b_k_l);
@@ -136,7 +156,8 @@ int main(int argc, char* argv[]) {
 	MatrixXcd H_non_k = H_matrix.topLeftCorner(b_nk_l, b_nk_l);
 	MatrixXcd S_non_k = S_matrix.topLeftCorner(b_nk_l, b_nk_l);
 
-	if (jc.getForceOrthogonality() == true) {
+	if (jc.getForceOrthogonality() == true)
+	{
 		Corr_coef.resize(b_nk_l);
 		Corr_coef << 1.0, VectorXcd::Zero(b_nk_l - 1);
 
@@ -144,7 +165,9 @@ int main(int argc, char* argv[]) {
 
 		U_matrix_1eq.col(0) << -HF_ground.dot(S_matrix.topRightCorner(b_nk_l, b_k_l) * Cont_coef) * HF_ground, Cont_coef;
 		U_matrix_1eq.block(0, 1, b_nk_l, b_nk_l - 1) << U_matrix;
-	} else {
+	}
+	else
+	{
 		Corr_coef.resize(b_nk_l + 1);
 		Corr_coef << 1.0, VectorXcd::Zero(b_nk_l);
 
@@ -156,19 +179,24 @@ int main(int argc, char* argv[]) {
 
 	VectorXcd Coeff_ion;
 
-	if (jc.getSolveIon() == false) {
+	if (jc.getSolveIon() == false)
+	{
 		Coeff_ion = HF_ground;
-	} else {
+	}
+	else
+	{
 		cout << "\n Computing starting ion orbital. \n";
 
 		GeneralizedSelfAdjointEigenSolver<MatrixXcd> es;
 		es.compute(H_non_k, S_non_k);
 
-		cout << " Ion orbital energies: \n\n" << es.eigenvalues() << "\n\n";
+		cout << " Ion orbital energies: \n\n"
+			 << es.eigenvalues() << "\n\n";
 
 		Coeff_ion = es.eigenvectors().col(0);
 
-		cout << " Eigenvector:\n" << Coeff_ion << "\n\n";
+		cout << " Eigenvector:\n"
+			 << Coeff_ion << "\n\n";
 		cout << " Done. \n\n";
 	}
 
@@ -216,7 +244,8 @@ int main(int argc, char* argv[]) {
 
 	S_pk = Ion.dot(S_matrix * Cont);
 
-	cout << "\n" << " S_pk : " << S_pk << "\n\n";
+	cout << "\n"
+		 << " S_pk : " << S_pk << "\n\n";
 
 	cout << " Dx_kI:     " << Dx_kI << "\n";
 	cout << " Dy_kI:     " << Dy_kI << "\n";
@@ -357,8 +386,9 @@ int main(int argc, char* argv[]) {
 	auto end = chrono::system_clock::now();
 	chrono::duration<double> elapsed_seconds = end - start;
 	cout << " CPU time: " << setprecision(5) << fixed << elapsed_seconds.count() << " s\n";
-	cout << "==========================================================================" << "\n" << "\n";
+	cout << "=========================================================================="
+		 << "\n"
+		 << "\n";
 
 	return EXIT_SUCCESS;
 }
-

@@ -1,20 +1,15 @@
 #include "iteration_controler.h"
 
-using namespace std;
-
 void Iteration_controler::iterate() {
-	if (info != ready) {
-		cout << " Iteration not ready!\n";
-		return;
-	}
+	assert(info == ready);
 
-	cout << "\n" << " Starting iteration.\n";
+	std::cout << "\n" << " Starting iteration.\n";
 
 	info = running;
 	while (info == running) {
 		iter_count++;
-		cout << "\n";
-		cout << "========= Iteration " << iter_count << " =============" << "\n\n";
+		std::cout << "\n";
+		std::cout << "========= Iteration " << iter_count << " =============" << "\n\n";
 
 		info = one_step();
 
@@ -30,13 +25,13 @@ void Iteration_controler::iterate() {
 		}
 		if (iter_count == max_iter_count) {
 			info = iterations_limit;
-			cout << " Iterations limit reached. \n";
+			std::cout << " Iterations limit reached. \n";
 			break;
 		}
 		if (self_sc_cout != 0)
-			cout << "\n" << " Self consistency counter:" << self_sc_cout << "\n\n";
+			std::cout << "\n" << " Self consistency counter:" << self_sc_cout << "\n\n";
 	}
-	cout << "\n";
-	cout << " ======= End of iteration " << " ===========" << "\n\n";
+	std::cout << "\n";
+	std::cout << " ======= End of iteration " << " ===========" << "\n\n";
 }
 

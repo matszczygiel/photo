@@ -32,6 +32,9 @@ public:
 	Eigen::VectorXcd Corr_coef, Coeff_ion;
 
 private:
+
+	Eigen::Map<>
+
 	unsigned b_l, b_nk_l;
 	bool force_ort, eval_1, eval_2, select_m;
 	double En, H_pp, H_kk, norm_k_sqrt, norm_b_sqrt;

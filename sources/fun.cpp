@@ -56,44 +56,6 @@ void GamessOrderWholeSet( double const* const* const* shl_crt, complex<double>* 
 
 }
 
-void Get_1E(const string file_name, complex<double>*& one_el, const int basis_length_sqrt, bool & error, bool print)
-{
-    int number_one_el;
-
-    ifstream file1E (file_name, ios::in|ios::binary|ios::ate);
-    if (file1E.is_open())
-    {
-        streampos size1E = file1E.tellg();
-        cout << " The size of 1E file is: " << size1E << endl;
-        int double_size = size1E*sizeof(char)/sizeof(double);
-        double* memblock= new double [double_size];
-
-        file1E.seekg (0, ios::beg);
-        file1E.read ( reinterpret_cast<char*>(memblock), size1E);
-        file1E.close();
-
-        number_one_el = double_size/2;
-        one_el = new complex<double> [number_one_el];
-
-        for(int j =0; j< number_one_el/ basis_length_sqrt; j++)
-        {
-            for(int i =0; i<basis_length_sqrt; i++) {
-                one_el[basis_length_sqrt*j+i] = memblock[2*j*basis_length_sqrt + i] + memblock[(2*j+1)*basis_length_sqrt + i]*J;
-            }
-        }
-        delete [] memblock;
-
-        cout << " The entire 1E file content is in memory. Number of leaded 1E integrals: " << number_one_el<<endl;
-        if(print){
-            for(int i =0; i<number_one_el; i++) printf("  %e + i%e \n", one_el[i].real(), one_el[i].imag());
-            cout <<endl;
-        }
-    }
-    else {
-        cout << " Unable to open 1E file!"<< endl;
-        error = true;
-    }
-}
 
 
 void Get_2E(const string file_name, complex<double> ****& two_el_matrix, const int basis_length, bool & error, bool print)

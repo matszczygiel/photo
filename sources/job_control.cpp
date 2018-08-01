@@ -19,7 +19,7 @@ Job_control::Job_control()
     write = false;
 }
 
-void Job_control::read(const Input_data &in)
+void Job_control::read(Input_data &in)
 {
     std::string key, arg;
 
@@ -109,7 +109,8 @@ void Job_control::read(const Input_data &in)
     else
         file_1E = key;
 
-    arg = "FILE_2E" key = in.keys[arg];
+    arg = "FILE_2E";
+    key = in.keys[arg];
     if (boost::to_lower_copy(key) == "auto")
     {
         std::stringstream ss;
