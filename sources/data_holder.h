@@ -10,19 +10,25 @@
 
 class Data_holder
 {
-  public:
-    void free();
+public:
+  void free();
 
-    void load(const Disk_reader& r);
+  void load(const Disk_reader &r);
 
-    Eigen::MatrixXcd H;
-    Eigen::MatrixXcd S;
-    Eigen::MatrixXcd Gaugex;
-    Eigen::MatrixXcd Gaugey;
-    Eigen::MatrixXcd Gaugez;
-    Eigen::MatrixXcd HF;
+  inline bool is_full() const { return full; }
 
-    Tensor_2Ecd Rints;
+  Eigen::MatrixXcd H;
+  Eigen::MatrixXcd S;
+  Eigen::MatrixXcd Gaugex;
+  Eigen::MatrixXcd Gaugey;
+  Eigen::MatrixXcd Gaugez;
+  Eigen::MatrixXcd HFv;
+  Eigen::MatrixXcd CI;
+
+  Tensor_2Ecd Rints;
+
+private:
+  bool full = false;
 };
 
 #endif

@@ -6,7 +6,7 @@
 
 class Iteration_controler
 {
-  public:
+public:
 	enum status
 	{
 		not_started,
@@ -34,11 +34,11 @@ class Iteration_controler
 	inline void set_ready() { info = ready; }
 	inline void set_treshold(const double &treshold = 0.00001) { this->treshold = treshold; }
 
-  protected:
+protected:
 	double treshold = 0.00001;
 	status info = not_started;
 
-  private:
+private:
 	int self_sc_cout = 0;
 	int max_sc_count = 5;
 	int iter_count = 0;

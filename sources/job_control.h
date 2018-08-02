@@ -34,7 +34,8 @@ class Job_control
 	inline std::string get_file_CI() const { return path_in + file_CI; }
 	inline std::string get_continuum_id() const { return continuum_id; }
 
-	inline auto get_gauge() const { return gauge; }
+	inline gauge_t get_gauge() const { return gauge; }
+	inline bool get_force_orth() const { return force_orth; }
 
   private:
 	bool compute_bound;

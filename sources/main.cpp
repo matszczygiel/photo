@@ -32,6 +32,7 @@
 #include "two_electron_integrals.h"
 #include "iteration.h"
 #include "disk_reader.h"
+#include "data_holder.h"
 
 using namespace std;
 using namespace Eigen;
@@ -51,6 +52,8 @@ int main(int argc, char *argv[])
 	Job_control controler;
 	Input_data in_data;
 	Disk_reader reader;
+	Data_holder holder;
+	Iteration iterator;
 
 	try
 	{
@@ -63,6 +66,7 @@ int main(int argc, char *argv[])
 
 		controler.read(in_data);
 		reader.initialize(controler);
+		holder.load(reader);
 		
 	}
 	catch (std::exception& e)

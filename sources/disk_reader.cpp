@@ -18,6 +18,7 @@ void Disk_reader::read_file_basis()
     basis_l = 0;
     basis_lnk = 0;
     bool cont = false;
+    bool kvec_read = false;
 
     for (std::string line; std::getline(bfile, line);)
         if (line == "$BASIS")
@@ -96,14 +97,28 @@ void Disk_reader::read_file_basis()
                 throw std::runtime_error("The basis file contains unrecognized shell.");
 
             for (int i = 0; i < end; i++)
+            {
                 std::getline(bfile, line);
+                if (!kvec_read)
+                {
+                    boost::tokenizer<> kvec_tok(line);
+                    auto it = kvec_tok.begin();
+                    it++;
+                    it++;
+                    it++;
+                    kvec(0) = std::stod(*(++it));
+                    kvec(1) = std::stod(*(++it));
+                    kvec(2) = std::stod(*(++it));
+                    kvec_read = true;
+                }
+            }
         }
     }
     bfile.close();
     status = ready;
 }
 
-Eigen::MatrixXcd Disk_reader::load_matrix1E(const int &position) const
+Eigen::MatrixXcd Disk_reader::load_matrix1E_bin(const int &position) const
 {
     assert(status == ready);
 
@@ -141,42 +156,42 @@ Eigen::MatrixXcd Disk_reader::load_matrix1E(const int &position) const
 
 Eigen::MatrixXcd Disk_reader::load_S() const
 {
-    return load_matrix1E(0);
+    return load_matrix1E_bin(0);
 }
 
 Eigen::MatrixXcd Disk_reader::load_H() const
 {
-    return load_matrix1E(3);
+    return load_matrix1E_bin(3);
 }
 
 Eigen::MatrixXcd Disk_reader::load_Dipx() const
 {
-    return load_matrix1E(4);
+    return load_matrix1E_bin(4);
 }
 
 Eigen::MatrixXcd Disk_reader::load_Dipy() const
 {
-    return load_matrix1E(5);
+    return load_matrix1E_bin(5);
 }
 
 Eigen::MatrixXcd Disk_reader::load_Dipz() const
 {
-    return load_matrix1E(6);
+    return load_matrix1E_bin(6);
 }
 
 Eigen::MatrixXcd Disk_reader::load_Gradx() const
 {
-    return load_matrix1E(13);
+    return load_matrix1E_bin(13);
 }
 
 Eigen::MatrixXcd Disk_reader::load_Grady() const
 {
-    return load_matrix1E(14);
+    return load_matrix1E_bin(14);
 }
 
 Eigen::MatrixXcd Disk_reader::load_Gradz() const
 {
-    return load_matrix1E(15);
+    return load_matrix1E_bin(15);
 }
 
 Tensor_2Ecd &Disk_reader::load_Rints() const
@@ -258,4 +273,73 @@ Eigen::MatrixXcd Disk_reader::load_Gaugez() const
     default:
         return load_Dipz();
     }
+}
+
+Eigen::MatrixXcd Disk_reader::load_HFv() const
+{
+    assert(status == ready);
+
+    Eigen::MatrixXcd mat(basis_lnk, basis_lnk);
+
+    std::ifstream file(job->get_file_HFv());
+    if (!file.is_open())
+        throw std::runtime_error("Cannot open the HFv file.");
+
+    for (int i = 0; i < get_basis_length_nk_sqrt(); ++i)
+        file >> mat.data()[i];
+
+    file.close();
+
+    return mat;
+}
+
+Eigen::MatrixXcd Disk_reader::load_CI() const
+{
+    assert(status == ready);
+
+    Eigen::MatrixXcd mat(basis_lnk, basis_lnk);
+    mat.setZero();
+
+    std::ifstream file(job->get_file_CI());
+    if (!file.is_open())
+        throw std::runtime_error("Cannot open the CI file.");
+
+    std::stringstream ss;
+    std::string line;
+
+    int i, j;
+    double v_ij;
+    while (std::getline(file, line))
+    {
+        ss.clear();
+        ss << line;
+        line.clear();
+        ss >> i >> j >> v_ij;
+        mat(i, j) = v_ij;
+    }
+    file.close();
+
+    return mat;
+}
+
+Eigen::VectorXcd Disk_reader::load_norms() const
+{
+    assert(status == ready);
+
+    Eigen::VectorXcd vec(basis_l);
+
+    std::ifstream file(job->get_file_norm(), std::ios::in | std::ios::binary);
+    if (!file.is_open())
+        throw std::runtime_error("Cannot open the norms file.");
+
+    std::streampos size = file.tellg();
+    int double_size = size * sizeof(char) / sizeof(double);
+    if (double_size != basis_l)
+        throw std::runtime_error("Size of the norms file is not consistent with basis. Have you used the correct norms file?");
+
+    file.seekg(0, std::ios::beg);
+    file.read(reinterpret_cast<char *>(.vec.data()), size);
+    file.close();
+
+    return vec;
 }

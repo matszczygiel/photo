@@ -14,8 +14,8 @@ template <class type>
 class Tensor_2E
 {
   public:
-	using index_array = std::array<Eigen::Tensor::Index, 4>> ;
-	using index = Eigen::Tensor::Index;
+	using index = Eigen::Tensor<type, 4>::Index;
+	using index_array = std::array<index, 4>;
 	using conjugation_flag = bool;
 
 	enum position
@@ -51,7 +51,7 @@ class Tensor_2E
 		return size;
 	}
 
-	inline auto coef(const index &i, const index &j, const index &k, const index &l) const
+	inline type coef(const index &i, const index &j, const index &k, const index &l) const
 	{
 		assert(i < size && j < size && k < size && l < size);
 		auto unq_perm = get_unq_combination(i, j, k, l);
@@ -81,17 +81,73 @@ class Tensor_2E
 			f ? pos_cubes[a[3]]({a[0], a[1], a[2]}) = conj(val) : npos_cubes[a[3]]({a[0], a[1], a[2]}) = val;
 	}
 
-	void print()
+	inline Eigen::Matrix<type, Eigen::Dynamic, Eigen::Dynamic>
+	contract(const Eigen::Matrix<type, Eigen::Dynamic, 1> &vec1,
+			 const Eigen::Matrix<type, Eigen::Dynamic, 1> &vec2,
+			 const index &i1, const index &i2)
+	{
+		assert(vec1.size() == size && vec2.size() == size);
+		assert(i1 == 0 || i1 == 2);
+		assert(i2 == 1 || i2 == 3);
+
+		Eigen::Matrix<type, Dynamic, Dynamic> res(size, size);
+		res.setZero();
+
+		switch (i1)
+		{
+		case 0:
+			switch (i2)
+			{
+			case 1:
+				for (unsigned i = 0; i < size; i++)
+					for (unsigned j = 0; j < size; j++)
+						for (unsigned k = 0; k < size; k++)
+							for (unsigned l = 0; l < size; l++)
+								res(i, j) += conj(vec1(k)) * coef(k, l, i, j) * vec2(l);
+				break;
+			case 3:
+				for (unsigned i = 0; i < size; i++)
+					for (unsigned j = 0; j < size; j++)
+						for (unsigned k = 0; k < size; k++)
+							for (unsigned l = 0; l < size; l++)
+								res(i, j) += conj(vec1(k)) * coef(k, j, i, l) * vec2(l);
+				break;
+			}
+			break;
+		case 2:
+			switch (i2)
+			{
+			case 1:
+				for (unsigned i = 0; i < size; i++)
+					for (unsigned j = 0; j < size; j++)
+						for (unsigned k = 0; k < size; k++)
+							for (unsigned l = 0; l < size; l++)
+								res(i, j) += conj(vec1(k)) * coef(i, l, k, j) * vec2(l);
+				break;
+			case 3:
+				for (unsigned i = 0; i < size; i++)
+					for (unsigned j = 0; j < size; j++)
+						for (unsigned k = 0; k < size; k++)
+							for (unsigned l = 0; l < size; l++)
+								res(i, j) += conj(vec1(k)) * coef(i, j, k, l) * vec2(l);
+				break;
+			}
+			break
+		}
+		return res;
+	}
+
+	void print(std::ostream &os)
 	{
 		for (size_t i = 0; i < size; ++i)
 			for (size_t j = 0; j < size; ++j)
 				for (size_t k = 0; k < size; ++k)
 					for (size_t l = 0; l < size; ++l)
 					{
-						std::cout << "  " << i + 1 << " " << j + 1 << " " << k + 1 << " " << l + 1 << "\n";
-						std::cout << coef(i, j, k, l) << "\n";
+						os << "  " << i + 1 << " " << j + 1 << " " << k + 1 << " " << l + 1 << "\n";
+						os << coef(i, j, k, l) << "\n";
 					}
-		std::cout << "\n";
+		os << "\n";
 	}
 
   protected:
@@ -119,12 +175,13 @@ class Tensor_2E
 	}
 
   private:
-	std::vector<Eigen::Tensor<type>, 3>> pos_cubes;
-	std::vector<Eigen::Tensor<type>, 3>> neg_cubes;
+	std::vector<Eigen::Tensor<type, 3>> pos_cubes;
+	std::vector<Eigen::Tensor<type, 3>> neg_cubes;
 
 	size_t size;
 };
 
 using Tensor_2Ecd = Tensor_2E<std::complex<double>>;
+using Tensor_2Ed = Tensor_2E<double>;
 
 #endif // TWO_ELECTRON_INTEGRALS_H

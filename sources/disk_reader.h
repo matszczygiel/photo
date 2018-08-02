@@ -37,6 +37,7 @@ public:
   inline int get_basis_length_k_sqrt() const { return (basis_l - basis_lnk) * (basis_l - basis_lnk); }
   inline int get_basis_length_nk() const { return basis_lnk; }
   inline int get_basis_length_nk_sqrt() const { return basis_lnk * basis_lnk; }
+  inline auto get_kvec() const { return kvec; }
 
   inline bool is_ready() const { return status == ready ? true : false; }
 
@@ -53,13 +54,16 @@ public:
   Eigen::MatrixXcd load_Gaugey() const;
   Eigen::MatrixXcd load_Gaugez() const;
 
-  Eigen::MatrixXcd load_HF() const;
+  Eigen::MatrixXcd load_HFv() const;
+  Eigen::MatrixXcd load_CI() const;
+
+  Eigen::VectorXcd load_norms() const;
 
   Tensor_2Ecd &load_Rints() const;
 
 protected:
   void read_file_basis();
-  Eigen::MatrixXcd load_matrix1E(const int &position) const;
+  Eigen::MatrixXcd load_matrix1E_bin(const int &position) const;
 
 private:
   std::shared_ptr<Job_control> job = nullptr;
@@ -67,6 +71,7 @@ private:
   int basis_lnk = 0;
   Status_t status = constructed;
   const int matrices1E_number = 20;
+  Eigen::Vector3d kvec;
 };
 
 #endif
