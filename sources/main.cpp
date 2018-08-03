@@ -25,18 +25,16 @@
 #include <eigen3/unsupported/Eigen/CXX11/Tensor>
 
 #include "rec.h"
-#include "fun.h"
 #include "constants.h"
 #include "harmonics.h"
 #include "job_control.h"
 #include "two_electron_integrals.h"
 #include "iteration.h"
 #include "disk_reader.h"
-#include "data_holder.h"
+#include "calculator.h"
 
 using namespace std;
 using namespace Eigen;
-
 
 int main(int argc, char *argv[])
 {
@@ -49,174 +47,67 @@ int main(int argc, char *argv[])
 	}
 
 	string input = argv[1];
+
 	Job_control controler;
 	Input_data in_data;
 	Disk_reader reader;
-	Data_holder holder;
-	Iteration iterator;
+	Calculator calc;
+	Iteration iter;
+
+	cout << scientific;
+	cout.precision(5);
 
 	try
 	{
-		std::ifstream ifile(input);
+		ifstream ifile(input);
 		if (!ifile.is_open())
-			throw std::runtime_error("Invalid input file parsed.");
+			throw runtime_error("Invalid input file parsed.");
 
 		in_data.read_input(ifile);
 		ifile.close();
 
 		controler.read(in_data);
 		reader.initialize(controler);
-		holder.load(reader);
-		
+		calc.initialize(controler, reader);
+		iter.initialize(controler, reader);
 	}
-	catch (std::exception& e)
+	catch (exception &e)
 	{
-		std::cerr << e.what() << "\n";
+		cerr << e.what() << "\n";
 		return EXIT_FAILURE;
 	}
 
+	double energy = calc.energy();
+	auto vec_cont = calc.continuum_vec();
+	VectorXd vec_ion;
+	VectorXd grHF = reader.load_HFv().col(0);
 
-
-
-
-
-
-
-
-
-	jc.readInput(input);
-	jc.calcualteBasisFunctNumber();
-	jc.print();
-
-	const unsigned b_l = jc.getBL();
-	const unsigned b_l_sqrt = jc.getBLsqrt();
-	const unsigned b_nk_l = jc.getBNKL();
-	const unsigned b_nk_l_sqrt = jc.getBNKLsqrt();
-	const unsigned b_k_l = jc.getBKL();
-
-	cout << scientific;
-	cout.precision(5);
-
-	///load integrals to memory
-
-	//one-electron integrals
-	Cdouble *one_el;
-	Get_1E(jc.getFile1E(), one_el, b_l_sqrt, error, false);
-
-	MatrixXcd S_matrix = Map<MatrixXcd>(one_el, b_l, b_l).transpose();
-	MatrixXcd H_matrix = Map<MatrixXcd>(&one_el[3 * b_l_sqrt], b_l, b_l).transpose();
-	MatrixXcd Dx_matrix;
-	MatrixXcd Dy_matrix;
-	MatrixXcd Dz_matrix;
-
-	if (jc.get_gauge() == 0)
-	{
-		Dx_matrix = Map<MatrixXcd>(&one_el[4 * b_l_sqrt], b_l, b_l).transpose();
-		Dy_matrix = Map<MatrixXcd>(&one_el[5 * b_l_sqrt], b_l, b_l).transpose();
-		Dz_matrix = Map<MatrixXcd>(&one_el[6 * b_l_sqrt], b_l, b_l).transpose();
-	}
-	else if (jc.get_gauge() == 1)
-	{
-		double multiply = photonEeV(jc.getK(), jc.getIB()) * 0.036749305;
-		Dx_matrix = Map<MatrixXcd>(&one_el[13 * b_l_sqrt], b_l, b_l).transpose() / multiply;
-		Dy_matrix = Map<MatrixXcd>(&one_el[14 * b_l_sqrt], b_l, b_l).transpose() / multiply;
-		Dz_matrix = Map<MatrixXcd>(&one_el[15 * b_l_sqrt], b_l, b_l).transpose() / multiply;
-	}
-
-	delete[] one_el;
-
-	//two-electron integrals
-
-	Tensor<Cdouble, 4> two_el_matrix;
-	cout.precision(10);
-	read_two_el_from_binary(two_el_matrix, jc.getFile2E(), b_l, false);
-
-	/// import HF orbitlas
-
-	double *HF_coef;
-	Get_HF_data(jc.getFileHF(), HF_coef, b_nk_l_sqrt, error, false);
-
-	VectorXd HF_ground = Map<VectorXd>(HF_coef, b_nk_l);
-	MatrixXd U_matrix = Map<MatrixXd>(&HF_coef[b_nk_l], b_nk_l, b_nk_l - 1);
-	MatrixXd HF_matrix = Map<MatrixXd>(HF_coef, b_nk_l, b_nk_l);
-
-	delete[] HF_coef;
-
-	/// import the continuum coefficients and transforamtion to more direct form
-	//store in the memory as Gamess order
-
-	Cdouble *cont_coef;
-	Prepare_cont_coef(jc.getFileNorm(), cont_coef, jc.getLmax(), b_k_l, b_nk_l, error);
-
-	VectorXcd Cont_coef = Map<VectorXcd>(cont_coef, b_k_l);
-	delete[] cont_coef;
-
-	///////Prepare data for the iteration
-
-	///Prepare matrices
-
-	VectorXcd Corr_coef;
-	MatrixXcd U_matrix_1eq;
-	MatrixXcd H_non_k = H_matrix.topLeftCorner(b_nk_l, b_nk_l);
-	MatrixXcd S_non_k = S_matrix.topLeftCorner(b_nk_l, b_nk_l);
-
-	if (jc.getForceOrthogonality() == true)
-	{
-		Corr_coef.resize(b_nk_l);
-		Corr_coef << 1.0, VectorXcd::Zero(b_nk_l - 1);
-
-		U_matrix_1eq = MatrixXcd::Zero(b_l, b_nk_l);
-
-		U_matrix_1eq.col(0) << -HF_ground.dot(S_matrix.topRightCorner(b_nk_l, b_k_l) * Cont_coef) * HF_ground, Cont_coef;
-		U_matrix_1eq.block(0, 1, b_nk_l, b_nk_l - 1) << U_matrix;
-	}
+	if (controler.get_compute_ion_state())
+		vec_ion = calc.bound_vec();
 	else
+		vec_ion = grHF;
+
+	try
 	{
-		Corr_coef.resize(b_nk_l + 1);
-		Corr_coef << 1.0, VectorXcd::Zero(b_nk_l);
-
-		U_matrix_1eq = MatrixXcd::Zero(b_l, b_nk_l + 1);
-
-		U_matrix_1eq.col(0) << VectorXcd::Zero(b_nk_l), Cont_coef;
-		U_matrix_1eq.block(0, 1, b_nk_l, b_nk_l) << MatrixXd::Identity(b_nk_l, b_nk_l);
+		iter.set_energy(energy);
+		iter.set_starting_vecs(vec_ion, vec_cont);
+		iter.load_matrices();
 	}
-
-	VectorXcd Coeff_ion;
-
-	if (jc.getSolveIon() == false)
+	catch (exception &e)
 	{
-		Coeff_ion = HF_ground;
+		cerr << e.what() << "\n";
+		return EXIT_FAILURE;
 	}
-	else
-	{
-		cout << "\n Computing starting ion orbital. \n";
-
-		GeneralizedSelfAdjointEigenSolver<MatrixXcd> es;
-		es.compute(H_non_k, S_non_k);
-
-		cout << " Ion orbital energies: \n\n"
-			 << es.eigenvalues() << "\n\n";
-
-		Coeff_ion = es.eigenvectors().col(0);
-
-		cout << " Eigenvector:\n"
-			 << Coeff_ion << "\n\n";
-		cout << " Done. \n\n";
-	}
-
-	///Let the iteration begin
-	Iteration iter(two_el_matrix);
-
-	iter.H_matrix = H_matrix;
-	iter.S_matrix = S_matrix;
-	iter.U_matrix_1eq = U_matrix_1eq;
-
-	iter.Corr_coef = Corr_coef;
-	iter.Coeff_ion = Coeff_ion;
-
-	iter.initialize(jc);
 
 	iter.iterate();
+
+	iter.free_ints();
+
+	auto vecI = iter.get_vecI();
+	auto vecC = iter.get_vecC();
+
+/*
+
 
 	Corr_coef = iter.Corr_coef;
 	Coeff_ion = iter.Coeff_ion;
@@ -382,10 +273,7 @@ int main(int argc, char *argv[])
 	sig = Sigma(jc.getK(), factor, jc.getIB());
 
 	cout << " CI sigma: " << sig << "\n";
-
-	if (jc.getIfWrite())
-		jc.writeRes(sig);
-
+*/
 	// successful exit
 	auto end = chrono::system_clock::now();
 	chrono::duration<double> elapsed_seconds = end - start;

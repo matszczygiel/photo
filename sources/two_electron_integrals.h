@@ -14,7 +14,7 @@ template <class type>
 class Tensor_2E
 {
   public:
-	using index = Eigen::Tensor<type, 4>::Index;
+	using index = typename Eigen::Tensor<type, 4>::Index;
 	using index_array = std::array<index, 4>;
 	using conjugation_flag = bool;
 
@@ -33,7 +33,7 @@ class Tensor_2E
 		for (int i = 0; i < size; ++i)
 		{
 			pos_cubes[i].resize(size - i, size - i, size - i);
-			neg_cubes[i].resize(i, i, i, i);
+			neg_cubes[i].resize(i, i, i);
 		}
 	}
 
@@ -46,7 +46,7 @@ class Tensor_2E
 		}
 	}
 
-	inline const auto get_size() const
+	inline const size_t get_size() const
 	{
 		return size;
 	}
@@ -78,7 +78,7 @@ class Tensor_2E
 		if (a[0] < a[3])
 			f ? neg_cubes[a[3]]({a[0], a[1], a[2]}) = conj(val) : neg_cubes[a[3]]({a[0], a[1], a[2]}) = val;
 		else
-			f ? pos_cubes[a[3]]({a[0], a[1], a[2]}) = conj(val) : npos_cubes[a[3]]({a[0], a[1], a[2]}) = val;
+			f ? pos_cubes[a[3]]({a[0], a[1], a[2]}) = conj(val) : pos_cubes[a[3]]({a[0], a[1], a[2]}) = val;
 	}
 
 	inline Eigen::Matrix<type, Eigen::Dynamic, Eigen::Dynamic>
@@ -90,7 +90,7 @@ class Tensor_2E
 		assert(i1 == 0 || i1 == 2);
 		assert(i2 == 1 || i2 == 3);
 
-		Eigen::Matrix<type, Dynamic, Dynamic> res(size, size);
+		Eigen::Matrix<type, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
 		res.setZero();
 
 		switch (i1)
@@ -132,7 +132,7 @@ class Tensor_2E
 								res(i, j) += conj(vec1(k)) * coef(i, j, k, l) * vec2(l);
 				break;
 			}
-			break
+			break;
 		}
 		return res;
 	}
@@ -165,13 +165,13 @@ class Tensor_2E
 	get_unq_combination(const index &i, const index &j, const index &k, const index &l) const
 	{
 		if (is_unique_combination(i, j, k, l))
-			return std::make_pair({i, j, k, l}, false);
+			return std::make_pair(index_array({i, j, k, l}), false);
 		else if (is_unique_combination(k, l, i, j))
-			return std::make_pair({k, l, i, j}, false);
+			return std::make_pair(index_array({k, l, i, j}), false);
 		else if (is_unique_combination(j, i, l, k))
-			return std::make_pair({j, i, l, k}, true);
+			return std::make_pair(index_array({j, i, l, k}), true);
 		else
-			return std::make_pair({l, k, j, i}, true);
+			return std::make_pair(index_array({l, k, j, i}), true);
 	}
 
   private:

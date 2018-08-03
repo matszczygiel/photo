@@ -117,7 +117,7 @@ double Harmonics::NoNormYrl(const int &l, const int &m, const Eigen::Vector3d &r
     return res;
 }
 
-double Harmonics::NoNormY(const int &l, const int &m, const Eigen::Vector3d &r)
+double Harmonics::Y(const int &l, const int &m, const Eigen::Vector3d &r)
 {
     return std::pow(r.norm(), l) * NoNormYrl(l, m, r);
 }

@@ -7,6 +7,15 @@ void Disk_reader::initialize(const Job_control &jc)
     status = initialized;
 }
 
+void Disk_reader::add_to_bl(const bool &cont, const int &moment)
+{
+    basis_l += Const_arrays::crt_siz.at(moment);
+    if (!cont)
+        basis_lnk += Const_arrays::crt_siz.at(moment);
+    if (cont && moment > lmax)
+        lmax = moment;
+}
+
 void Disk_reader::read_file_basis()
 {
     assert(status == initialized);
@@ -17,6 +26,7 @@ void Disk_reader::read_file_basis()
 
     basis_l = 0;
     basis_lnk = 0;
+    lmax = 0;
     bool cont = false;
     bool kvec_read = false;
 
@@ -41,57 +51,39 @@ void Disk_reader::read_file_basis()
 
             if (moment == "S")
             {
-                basis_l += Const_arrays::crt_siz.at(0);
-                if (!cont)
-                    basis_lnk += Const_arrays::crt_siz.at(0);
+                add_to_bl(cont, 0);
             }
             else if (moment == "P")
             {
-                basis_l += Const_arrays::crt_siz.at(1);
-                if (!cont)
-                    basis_lnk += Const_arrays::crt_siz.at(1);
+                add_to_bl(cont, 1);
             }
             else if (moment == "D")
             {
-                basis_l += Const_arrays::crt_siz.at(2);
-                if (!cont)
-                    basis_lnk += Const_arrays::crt_siz.at(2);
+                add_to_bl(cont, 2);
             }
             else if (moment == "F")
             {
-                basis_l += Const_arrays::crt_siz.at(3);
-                if (!cont)
-                    basis_lnk += Const_arrays::crt_siz.at(3);
+                add_to_bl(cont, 3);
             }
             else if (moment == "G")
             {
-                basis_l += Const_arrays::crt_siz.at(4);
-                if (!cont)
-                    basis_lnk += Const_arrays::crt_siz.at(4);
+                add_to_bl(cont, 4);
             }
             else if (moment == "H")
             {
-                basis_l += Const_arrays::crt_siz.at(5);
-                if (!cont)
-                    basis_lnk += Const_arrays::crt_siz.at(5);
+                add_to_bl(cont, 5);
             }
             else if (moment == "I")
             {
-                basis_l += Const_arrays::crt_siz.at(6);
-                if (!cont)
-                    basis_lnk += Const_arrays::crt_siz.at(6);
+                add_to_bl(cont, 6);
             }
             else if (moment == "K")
             {
-                basis_l += Const_arrays::crt_siz.at(7);
-                if (!cont)
-                    basis_lnk += Const_arrays::crt_siz.at(7);
+                add_to_bl(cont, 7);
             }
             else if (moment == "L")
             {
-                basis_l += Const_arrays::crt_siz.at(8);
-                if (!cont)
-                    basis_lnk += Const_arrays::crt_siz.at(8);
+                add_to_bl(cont, 8);
             }
             else
                 throw std::runtime_error("The basis file contains unrecognized shell.");
@@ -338,7 +330,7 @@ Eigen::VectorXcd Disk_reader::load_norms() const
         throw std::runtime_error("Size of the norms file is not consistent with basis. Have you used the correct norms file?");
 
     file.seekg(0, std::ios::beg);
-    file.read(reinterpret_cast<char *>(.vec.data()), size);
+    file.read(reinterpret_cast<char *>(vec.data()), size);
     file.close();
 
     return vec;

@@ -7,6 +7,9 @@ Iteration::status Iteration::one_step()
 {
 	// R matrices preparation
 
+	auto evalI = job->get_computeI();
+	auto evalC = job->get_computeC();
+
 	if (!(evalI || evalC))
 		return finished;
 
@@ -77,145 +80,107 @@ Iteration::status Iteration::one_step()
 	cout << " S matrices preparation done. \n\n";
 	cout << " Solving eigenvalue problem. \n\n";
 
-	int low_itC, low_itI;
-	double EnergyC, EnergyI;
+	double sel_paramC, seal_paramI;
 
-	int sizeC = AmatC.cols();
+	auto method = job->get_selection_mth();
+
+	VectorXcd vecIr_dum, vecCr_dum;
 
 	if (evalC)
 	{
 		es.compute(AmatC, SmatC);
-		cout << " 1 eq (continuum) energies: \n\n"
-			 << es.eigenvalues() << "\n\n";
+		VectorXd temp;
+		int itC;
+		int sizeC = AmatC.cols();
 
-		if (select_m == 0)
+		switch (method)
 		{
-			low_itC = 0;
-			EnergyC = es.eigenvalues()[0];
-			for (int i = 0; i < sizeC; i++)
-				if (abs(EnergyC - En) > abs(es.eigenvalues()[i] - En))
-				{
-					low_itC = i;
-					EnergyC = es.eigenvalues()[i];
-				}
-			cout << " Iterator to the matching Energy of 1eq: " << low_itC << " \n and it's enegry: " << EnergyC << "\n\n";
+		case Job_control::selection_mth_t::energy:
+			temp = es.eigenvalues() - En * VectorXd::Ones(es.eigenvalues().size());
+			temp = temp.cwiseAbs2();
+			temp.minCoeff(&itC);
+			cout << " Iterator to the matching sel_param of C: " << itC
+				 << " \n and it's enegry: " << es.eigenvalues()[itC] << "\n\n";
 
-			Corr_coef_dum = es.eigenvectors().col(low_itC) / es.eigenvectors()(0, low_itC);
-		}
-		else if (select_m == 1)
-		{
-			low_itI = 0;
+			break;
 
-			Corr_coef_dum = es.eigenvectors().col(0) / es.eigenvectors()(0, 0);
-
-			EnergyC = real(
-				(Corr_coef_dum.tail(sizeC - 1)).dot(S_transformed.bottomRightCorner(sizeC - 1, sizeC - 1) * Corr_coef_dum.tail(sizeC - 1)));
-			double norm_temp;
-
-			for (int i = 1; i < sizeC; i++)
+		case Job_control::selection_mth_t::norm:
+			temp.resize(sizeC);
+			for (int i = 0; i < sizeC; ++i)
 			{
-				Corr_coef_dum = es.eigenvectors().col(i) / es.eigenvectors()(0, i);
-				norm_temp = real(
-					(Corr_coef_dum.tail(sizeC - 1)).dot(S_transformed.bottomRightCorner(sizeC - 1, sizeC - 1) * Corr_coef_dum.tail(sizeC - 1)));
-
-				if (abs(EnergyC) > abs(norm_temp))
-				{
-					low_itC = i;
-					EnergyC = norm_temp;
-				}
+				vecCr_dum = es.eigenvectors().col(i) / es.eigenvectors()(0, i);
+				temp(i) = real(
+					vecCr_dum.tail(sizeC - 1).dot(Str.bottomRightCorner(sizeC - 1, sizeC - 1) * vecCr_dum.tail(sizeC - 1)));
 			}
-			cout << " Iterator to the matching norm of 1eq: " << low_itC << " \n and it's norm: " << EnergyC;
-			cout << "\n and it's energy: " << es.eigenvalues()[low_itC] << "\n\n";
-
-			Corr_coef_dum = es.eigenvectors().col(low_itC) / es.eigenvectors()(0, low_itC);
+			temp.minCoeff(&itC);
+			cout << " Iterator to the matching norm of 1eq: " << itC;
+			cout << "\n and it's energy: " << es.eigenvalues()[itC] << "\n\n";
+			break;
 		}
+		vecCr_dum = es.eigenvectors().col(itC) / es.eigenvectors()(0, itC);
 	}
 
-	if (eval_2)
+	if (evalI)
 	{
 		es.compute(AmatI, SmatI);
-		cout << " 2 eq (bounded) energies: \n\n"
-			 << es.eigenvalues() << "\n\n";
+		VectorXd temp;
+		int itI;
 
-		if (select_m == 0)
+		switch (method)
 		{
+		case Job_control::selection_mth_t::energy:
+			temp = es.eigenvalues() - En * VectorXd::Ones(es.eigenvalues().size());
+			temp = temp.cwiseAbs2();
+			temp.minCoeff(&itI);
+			cout << " Iterator to the matching Energy of 2eq: " << itI
+				 << " \n and it's enegry: " << es.eigenvalues()[itI] << "\n\n";
 
-			low_itI = 0;
+			break;
 
-			EnergyI = es.eigenvalues()[0];
-			for (int i = 0; i < b_nk_l; i++)
-				if (abs(EnergyI - En) > abs(es.eigenvalues()[i] - En))
-				{
-					low_itI = i;
-					EnergyI = es.eigenvalues()[i];
-				}
-			cout << " Iterator to the matching Energy of 2eq: " << low_itI << " \n and it's enegry: " << EnergyI << "\n\n";
-
-			Coeff_ion_dum = es.eigenvectors().col(low_itI);
-			Coeff_ion_dum /= sqrt(real(Coeff_ion_dum.dot(S_non_k * Coeff_ion_dum)));
-		}
-		else if (select_m == 1)
-		{
-			low_itI = 0;
-
-			Coeff_ion_dum = es.eigenvectors().col(0);
-			Coeff_ion_dum /= sqrt(real(Coeff_ion_dum.dot(S_non_k * Coeff_ion_dum)));
-			EnergyI = norm(Coeff_ion_beginning.dot(S_non_k * Coeff_ion_dum));
-			double norm_temp;
-
-			for (int i = 1; i < b_nk_l; i++)
+		case Job_control::selection_mth_t::norm:
+			temp.resize(bnkl);
+			for (int i = 0; i < bnkl; ++i)
 			{
-				Coeff_ion_dum = es.eigenvectors().col(i);
-				Coeff_ion_dum /= sqrt(real(Coeff_ion_dum.dot(S_non_k * Coeff_ion_dum)));
-				norm_temp = norm(Coeff_ion_beginning.dot(S_non_k * Coeff_ion_dum));
-
-				if (norm_temp > EnergyI)
-				{
-					low_itI = i;
-					EnergyI = norm_temp;
-				}
+				vecIr_dum = es.eigenvectors().col(i);
+				vecIr_dum /= sqrt(real(vecIr_dum.dot(Snk * vecIr_dum)));
+				temp(i) = norm(vecIrs.dot(Snk * vecIr_dum));
 			}
-			cout << " Iterator to the matching solution of 2eq: " << low_itI << " \n and it's coefficient: " << EnergyI;
-			cout << "\n and it's energy: " << es.eigenvalues()[low_itI] << "\n\n";
+			temp.maxCoeff(&itI);
+			cout << " Iterator to the matching norm of 1eq: " << itI;
+			cout << "\n and it's energy: " << es.eigenvalues()[itI] << "\n\n";
 
-			Coeff_ion_dum = es.eigenvectors().col(low_itI);
-			Coeff_ion_dum /= sqrt(real(Coeff_ion_dum.dot(S_non_k * Coeff_ion_dum)));
+			break;
 		}
+
+		vecIr_dum = es.eigenvectors().col(itI);
+		vecIr_dum /= sqrt(real(vecIr_dum.dot(Snk * vecIr_dum)));
 	}
 
 	//Check for self consistency
 
-	double diff_norm_eq1 = 0.0;
-	double diff_norm_eq2 = 0.0;
+	double conv_paramC = 0.0;
+	double conv_paramI = 0.0;
 
-	if (eval_1)
+	if (evalC)
 	{
-		diff_norm_eq1 = (Corr_coef_dum.cwiseAbs() - Corr_coef.cwiseAbs()).norm();
-		cout << "\n Norm of difference for eq1: " << diff_norm_eq1 << "\n";
-		Corr_coef = Corr_coef_dum;
+		conv_paramC = (vecCr_dum.cwiseAbs() - vecCr.cwiseAbs()).norm();
+		cout << "\n Norm of difference for eq1: " << conv_paramC << "\n";
+		vecCr = vecCr_dum;
 	}
-	if (eval_2)
+	if (evalI)
 	{
-		diff_norm_eq2 = (Coeff_ion_dum.cwiseAbs() - Coeff_ion.cwiseAbs()).norm();
-		cout << "\n Norm of difference for eq2: " << diff_norm_eq2 << "\n";
-		Coeff_ion = Coeff_ion_dum;
+		conv_paramI = (vecIr_dum.cwiseAbs() - vecIr.cwiseAbs()).norm();
+		cout << "\n Norm of difference for eq2: " << conv_paramI << "\n";
+		vecIr = vecIr_dum;
 	}
 
-	cout << "New continuum: \n";
-	cout << Corr_coef;
-	cout << "\n\n";
+	vecC = U * vecCr;
+	vecI << vecIr, VectorXcd::Zero(bl - bnkl);
 
-	cout << "New bound: \n";
-	cout << Coeff_ion;
-	cout << "\n\n";
-
-	Cont = U_matrix_1eq * Corr_coef;
-	Ion << Coeff_ion, VectorXcd::Zero(b_l - b_nk_l);
-
-	if (!(eval_1 && eval_2))
+	if (!(evalI && evalC))
 		return finished;
 
-	if (diff_norm_eq1 < treshold && diff_norm_eq2 < treshold)
+	if (conv_paramC < treshold && conv_paramI < treshold)
 		return self_consistent;
 	else
 		return running;
@@ -228,74 +193,100 @@ void Iteration::initialize(const Job_control &controler, const Disk_reader &read
 	job = std::make_shared<Job_control>(controler);
 	read = std::make_shared<Disk_reader>(reader);
 
-	eval_1 = jc.getEval1eq();
-	eval_2 = jc.getEval2eq();
-	select_m = jc.getSelectionMethod();
-	En = Energy(jc.getK(), jc.getIB());
-
-	H_non_k = H_matrix.topLeftCorner(b_nk_l, b_nk_l);
-	S_non_k = S_matrix.topLeftCorner(b_nk_l, b_nk_l);
-
-	k_R_k.resize(b_nk_l, b_nk_l);
-	kk_R.resize(b_nk_l, b_nk_l);
-	p_R_p.resize(b_l, b_l);
-	pp_R.resize(b_l, b_l);
-
-	Cont = U_matrix_1eq * Corr_coef;
-	Ion.resize(b_l);
-	Ion << Coeff_ion, VectorXcd::Zero(b_l - b_nk_l);
-	Coeff_ion_beginning = Coeff_ion;
-
-	U_matrix_1eq_H = U_matrix_1eq.adjoint();
-	S_transformed = U_matrix_1eq_H * S_matrix * U_matrix_1eq;
+	evalI = job->get_computeI();
+	evalC = job->get_computeC();
 
 	info = ready;
 }
 
-void Iteration::load_ints()
+void Iteration::set_energy(const double &energy)
 {
-	Rints = read->load_Rints();
+	En = energy;
+	energy_loaded = true;
+}
+
+void Iteration::set_starting_vecs(const Eigen::VectorXcd &vec_ion,
+								  const Eigen::VectorXcd &vec_cont)
+{
+	assert(read->is_ready());
+
+	int bnkl = read->get_basis_length_nk();
+	int bl = read->get_basis_length();
+	int bkl = read->get_basis_length_k();
+
+	vecI = VectorXcd::Zero(bl);
+	vecC = VectorXcd::Zero(bl);
+
+	vecI.head(bnkl) = vec_ion;
+	vecC.tail(bkl) = vec_cont;
+	starting_vec_loaded = true;
+}
+
+void Iteration::load_matrices()
+{
+	assert(read->is_ready());
+	assert(starting_vec_loaded);
+
+	if (evalC || evalI)
+		Rints = read->load_Rints();
+
 	H = read->load_H();
 	S = read->load_S();
 
-	const bnkl = read->get_basis_length_nk();
-	Hnk = H.topLeftCorner(bnkl, bnkl);
-	Snk = S.topLeftCorner(bnkl, bnkl);
-}
-/*
-	const int bnkl = read->get_basis_length_nk();
-	const int bkl = read->get_basis_length_k();
-	const int bl = read->get_basis_length();
+	int bnkl = read->get_basis_length_nk();
+	int bl = read->get_basis_length();
+	int bkl = read->get_basis_length_k();
 
-	auto HF = read->load_HFv();
-	MatrixXd Utemp = HF.leftCols(bnkl - 1);
+	Hnk = H.topLeftCorner(bnkl, bnkl).real();
+	Snk = S.topLeftCorner(bnkl, bnkl).real();
+
+	MatrixXd HF = read->load_HFv().real();
 
 	if (job->get_force_orth())
 	{
-		Corr_coef.resize(bnkl);
-		Corr_coef << 1.0, VectorXcd::Zero(b_nk_l - 1);
-
+		vecCrs.resize(bnkl);
+		vecCrs << 1.0, VectorXcd::Zero(bnkl - 1);
 		U = MatrixXcd::Zero(bl, bnkl);
-		U.col(0) << - scalar_prod(HF.col(0), S.topRightCorner(bnkl, bkl), )
-		-(HF.col(0)).dot(S_matrix.topRightCorner(b_nk_l, b_k_l) * Cont_coef) * HF_ground, Cont_coef;
-		U_.block(0, 1, bnkl, bnkl - 1) << Utemp;
+		U.col(0) << -(HF.col(0)).dot(S.topRightCorner(bnkl, bkl) * vecC.tail(bkl)) * HF.col(0),
+			vecC.tail(bkl);
+		U.block(0, 1, bnkl, bnkl - 1) << HF.rightCols(bnkl - 1);
 	}
 	else
 	{
-		Corr_coef.resize(b_nk_l + 1);
-		Corr_coef << 1.0, VectorXcd::Zero(b_nk_l);
-
-		U_matrix_1eq = MatrixXcd::Zero(b_l, b_nk_l + 1);
-
-		U_matrix_1eq.col(0) << VectorXcd::Zero(b_nk_l), Cont_coef;
-		U_matrix_1eq.block(0, 1, b_nk_l, b_nk_l) << MatrixXd::Identity(b_nk_l, b_nk_l);
+		vecCrs.resize(bnkl + 1);
+		vecCrs << 1.0, VectorXcd::Zero(bnkl);
+		U = MatrixXcd::Zero(bl, bnkl + 1);
+		U.col(0) << VectorXcd::Zero(bnkl), vecC.tail(bkl);
+		U.block(0, 1, bnkl, bnkl) << MatrixXd::Identity(bnkl, bnkl);
 	}
 
+	Str = U.adjoint() * S * U;
 
+	vecCr = vecCrs;
+	vecC = U * vecCr;
 
+	vecIrs = vecI.head(bnkl);
+	vecIr = vecIrs;
 
-
-	vecI = 
-
+	info = ready;
+	matrices_loaded = true;
 }
-*/
+
+void Iteration::iterate()
+{
+	assert(starting_vec_loaded);
+	assert(matrices_loaded);
+	assert(energy_loaded);
+	Iteration_controler::iterate();
+}
+
+void Iteration::free_ints()
+{
+	Rints.resize(0);
+	H.resize(0, 0);
+	S.resize(0, 0);
+	Hnk.resize(0, 0);
+	Snk.resize(0, 0);
+	Str.resize(0, 0);
+	U.resize(0, 0);
+}

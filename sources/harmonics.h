@@ -24,7 +24,7 @@ class Harmonics
 	/**
 	 * Return value of Y_{lm} (r), where Y_{lm} is REAL spherical harmonic. 
 	 */
-	static double NoNormY(const int &l, const int &m, const Eigen::Vector3d &r);
+	static double Y(const int &l, const int &m, const Eigen::Vector3d &r);
 };
 
 #endif // HARMONICS_H

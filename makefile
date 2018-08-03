@@ -6,7 +6,7 @@ dirs     := $(dir $(sources))
 VPATH    := $(dirs)
 
 cxx = g++
-cxxflags = -g -O2 -std=gnu++17
+cxxflags = -g -O2 -std=c++11 -I/usr/local/include/eigen3
 lflags = -std=c++17
 
 $(target): $(objects)

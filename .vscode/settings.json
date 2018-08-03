@@ -53,6 +53,7 @@
         "algorithm": "cpp",
         "core": "cpp",
         "specialfunctions": "cpp",
-        "tensor": "cpp"
+        "tensor": "cpp",
+        "dense": "cpp"
     }
 }

@@ -56,5 +56,5 @@ const vector<unsigned> Const_arrays::crt_siz([]() {
 	for(unsigned i = 0; i < crt_siz.size(); i++)
 	crt_siz[i] = (i*i + 3*i +2) / 2;
 	return crt_siz;
-});
+}());
 
