@@ -2,7 +2,7 @@ COMPUTE_BOUND		[Y,N] //upper or lower case
 COMPUTE_CONTINUUM 	[Y,N] //upper or lower case
 COMPUTE_ION_STATE 	[Y,N] //upper or lower case
 
-K 		        	1.234
+K 		        	1.234  //for auto file naming
 ENERGY_I_STATE 		-2.665
 ENERGY_F_STATE		-2.0
 

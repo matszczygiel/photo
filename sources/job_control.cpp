@@ -1,5 +1,6 @@
 #include "job_control.h"
 
+
 Job_control::Job_control()
 {
     compute_bound = false;

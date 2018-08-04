@@ -3,8 +3,8 @@
 void Disk_reader::initialize(const Job_control &jc)
 {
     job = std::make_shared<Job_control>(jc);
-    read_file_basis();
     status = initialized;
+    read_file_basis();
 }
 
 void Disk_reader::add_to_bl(const bool &cont, const int &moment)
@@ -39,15 +39,20 @@ void Disk_reader::read_file_basis()
         if (line == "$END")
             break;
 
-        boost::tokenizer<> tok(line);
-        *tok.begin() == job->get_continuum_id() ? cont = true : cont = false;
+        boost::tokenizer<boost::char_separator<char>> tok(line, boost::char_separator<char>(" \t\n"));
+        cont = *tok.begin() == job->get_continuum_id() ? true : false;
 
-        while (!line.empty())
+        while (true)
         {
             std::getline(bfile, line);
+            if(line.empty()) break;
             tok.assign(line);
-            std::string moment = *tok.begin();
-            int end = std::stoi(*(++tok.begin()));
+            auto tokit = tok.begin();
+            std::string moment = *tokit;
+            std::cout << moment << std::endl;
+            tokit++;
+            int end = std::stoi(*tokit);
+            std::cout << end << std::endl;
 
             if (moment == "S")
             {
@@ -93,14 +98,18 @@ void Disk_reader::read_file_basis()
                 std::getline(bfile, line);
                 if (!kvec_read)
                 {
-                    boost::tokenizer<> kvec_tok(line);
+                    boost::tokenizer<boost::char_separator<char>> kvec_tok(line, boost::char_separator<char>(" \t\n"));
                     auto it = kvec_tok.begin();
                     it++;
                     it++;
                     it++;
-                    kvec(0) = std::stod(*(++it));
-                    kvec(1) = std::stod(*(++it));
-                    kvec(2) = std::stod(*(++it));
+                    it++;
+                    kvec(0) = std::stod(*it);
+                    it++;
+                    kvec(1) = std::stod(*it);
+                    it++;
+                    kvec(2) = std::stod(*it);
+                    it++;
                     kvec_read = true;
                 }
             }
@@ -114,7 +123,7 @@ Eigen::MatrixXcd Disk_reader::load_matrix1E_bin(const int &position) const
 {
     assert(status == ready);
 
-    std::ifstream file1E(job->get_file_1E(), std::ios::in | std::ios::binary);
+    std::ifstream file1E(job->get_file_1E(), std::ios::in | std::ios::binary | std::ios::ate);
     if (!file1E.is_open())
         throw std::runtime_error("Unable to open 1E file.");
 
@@ -190,7 +199,7 @@ Tensor_2Ecd &Disk_reader::load_Rints() const
 {
     assert(status == ready);
 
-    std::ifstream file2E(job->get_file_2E(), std::ios::in | std::ios::binary);
+    std::ifstream file2E(job->get_file_2E(), std::ios::in | std::ios::binary | std::ios::ate);
     if (!file2E.is_open())
         throw std::runtime_error("Cannot open the 2E file.");
 
@@ -267,11 +276,11 @@ Eigen::MatrixXcd Disk_reader::load_Gaugez() const
     }
 }
 
-Eigen::MatrixXcd Disk_reader::load_HFv() const
+Eigen::MatrixXd Disk_reader::load_HFv() const
 {
     assert(status == ready);
 
-    Eigen::MatrixXcd mat(basis_lnk, basis_lnk);
+    Eigen::MatrixXd mat(basis_lnk, basis_lnk);
 
     std::ifstream file(job->get_file_HFv());
     if (!file.is_open())
@@ -285,11 +294,11 @@ Eigen::MatrixXcd Disk_reader::load_HFv() const
     return mat;
 }
 
-Eigen::MatrixXcd Disk_reader::load_CI() const
+Eigen::MatrixXd Disk_reader::load_CI() const
 {
     assert(status == ready);
 
-    Eigen::MatrixXcd mat(basis_lnk, basis_lnk);
+    Eigen::MatrixXd mat(basis_lnk, basis_lnk);
     mat.setZero();
 
     std::ifstream file(job->get_file_CI());
@@ -320,12 +329,14 @@ Eigen::VectorXcd Disk_reader::load_norms() const
 
     Eigen::VectorXcd vec(basis_l);
 
-    std::ifstream file(job->get_file_norm(), std::ios::in | std::ios::binary);
+    std::ifstream file(job->get_file_norm(), std::ios::in | std::ios::binary | std::ios::ate);
     if (!file.is_open())
         throw std::runtime_error("Cannot open the norms file.");
 
     std::streampos size = file.tellg();
     int double_size = size * sizeof(char) / sizeof(double);
+    std::cout << size << std::endl;
+    std::cout << double_size << std::endl;
     if (double_size != basis_l)
         throw std::runtime_error("Size of the norms file is not consistent with basis. Have you used the correct norms file?");
 

@@ -54,6 +54,7 @@
         "core": "cpp",
         "specialfunctions": "cpp",
         "tensor": "cpp",
-        "dense": "cpp"
+        "dense": "cpp",
+        "strstream": "cpp"
     }
 }

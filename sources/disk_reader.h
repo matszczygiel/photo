@@ -59,8 +59,8 @@ public:
   Eigen::MatrixXcd load_Gaugey() const;
   Eigen::MatrixXcd load_Gaugez() const;
 
-  Eigen::MatrixXcd load_HFv() const;
-  Eigen::MatrixXcd load_CI() const;
+  Eigen::MatrixXd load_HFv() const;
+  Eigen::MatrixXd load_CI() const;
 
   Eigen::VectorXcd load_norms() const;
 

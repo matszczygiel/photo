@@ -7,13 +7,12 @@
 
 #include "constants.h"
 
-class Gamess
+namespace Gamess
 {
-  public:
-    static int pos_change_gamess(const int &l, const int &pos);
+    int pos_change_gamess(const int &l, const int &pos);
 
     template <class type1, class type2>
-    static std::vector<type1> order(const std::vector<std::vector<type2>> &shl_crt,
+    std::vector<type1> order(const std::vector<std::vector<type2>> &shl_crt,
                                     const int &l)
     {
         /* transform to the Gamess shell indexing */
@@ -31,7 +30,7 @@ class Gamess
     }
 
     template <class type1, class type2>
-    static std::vector<type1> order_set(const std::vector<std::vector<std::vector<type2>>> shl_crt)
+    std::vector<type1> order_set(const std::vector<std::vector<std::vector<type2>>> shl_crt)
     {
         std::vector<type1> shl_crt_dum;
         int l_max = shl_crt.size();

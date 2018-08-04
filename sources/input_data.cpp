@@ -1,5 +1,6 @@
 #include "input_data.h"
 
+
 void Input_data::read_input(std::ifstream &input_file)
 {
 	if (!input_file.is_open())
@@ -8,8 +9,13 @@ void Input_data::read_input(std::ifstream &input_file)
 	std::string line;
 	while (std::getline(input_file, line))
 	{
-		boost::tokenizer<> tok(line);
-		boost::tokenizer<>::iterator beg = tok.begin();
-		keys[*beg] = *beg++;
+		if(line.empty()) continue;
+		boost::tokenizer<boost::char_separator<char>> tok(line, boost::char_separator<char>(" \t\n"));
+		auto beg = tok.begin();
+		std::string key = *beg;
+		beg++;
+		std::string val = *beg;
+
+		keys.insert(std::make_pair(key, val));
 	}
 }
