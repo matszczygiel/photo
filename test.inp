@@ -1,26 +1,26 @@
-COMPUTE_BOUND		Y
+COMPUTE_BOUND	    Y
 COMPUTE_CONTINUUM 	Y
 COMPUTE_ION_STATE 	N
 
-K 		        0.400
+K 		            0.400
 ENERGY_I_STATE 		-2.8615873460
 ENERGY_F_STATE		-2.0
 
-PATH_IN      	    	/home/mateusz/work/cpp/photo/data/dof
-FILE_BASIS		auto
+PATH_IN      	    /home/mateusz/Documents/cpp/photo/data/dof
+FILE_BASIS		    auto
 FILE_1E		    	auto
-FILE_2E			auto
-FILE_NORM		auto
-FILE_HF_VEC		auto
-FILE_CI			auto
-CONTINUUM_ID        	auto
+FILE_2E			    auto
+FILE_NORM		    auto
+FILE_HF_VEC		    auto
+FILE_CI			    auto
+CONTINUUM_ID        auto
 
 ION_POTENTIAL		compute
 SELECTION_METHOD	energy
 FORCE_ORTHOGONALITY	N
-GAUGE			dipole
+GAUGE			    dipole
 
 WRITE	    		N 
-PATH_OUT                /home/mateusz/work/cpp/photo/data/dof
-FILE_OUT		res.dat
+PATH_OUT            /home/mateusz/Documents/cpp/photo/data/dof
+FILE_OUT            res.dat
 

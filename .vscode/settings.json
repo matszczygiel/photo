@@ -56,5 +56,6 @@
         "tensor": "cpp",
         "dense": "cpp",
         "strstream": "cpp"
-    }
+        },
+        "C_Cpp.clang_format_style": "Chromium"
 }

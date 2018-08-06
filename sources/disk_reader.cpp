@@ -205,7 +205,7 @@ Tensor_2Ecd &Disk_reader::load_Rints() const
 
     Tensor_2Ecd ints;
     ints.resize(basis_l);
-    ints.set_zero();
+    ints.zero();
 
     std::streampos file_size = file2E.tellg();
     unsigned long number_two_el = file_size * sizeof(char);
