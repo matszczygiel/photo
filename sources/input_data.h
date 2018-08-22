@@ -1,12 +1,9 @@
-#ifndef SOURCES_INPUT_DATA_H_
-#define SOURCES_INPUT_DATA_H_
+#ifndef SOURCES_INPUT_DATA_H
+#define SOURCES_INPUT_DATA_H
 
-#include <boost/tokenizer.hpp>
 #include <string>
 #include <map>
 #include <fstream>
-#include <stdexcept>
-#include <regex>
 
 class Input_data
 {

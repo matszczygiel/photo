@@ -1,5 +1,8 @@
 #include "input_data.h"
 
+#include <regex>
+#include <stdexcept>
+
 void Input_data::read_input(std::ifstream &input_file) {
     if (!input_file.is_open())
         throw std::runtime_error("Input file is not open!");

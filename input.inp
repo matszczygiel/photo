@@ -7,10 +7,10 @@ ENERGY_I_STATE 		-2.665
 ENERGY_F_STATE		-2.0
 
 PATH_IN      	    <path>
-FILE_BASIS		    [<name of file>, auto]
-FILE_1E		    	[<name of file>, auto]
-FILE_2E			    [<name of file>, auto]
-FILE_NORM		    [<name of file>, auto]
+FILE_BASIS		    [<name of file>, auto] //text file with names of binary files  
+FILE_1E		    	[<name of file>, auto] //text file with names of binary files
+FILE_2E			    [<name of file>, auto] //text file with names of binary files
+FILE_NORM		    [<name of file>, auto] //text file with names of binary files
 FILE_HF_VEC		    [<name of file>, auto]
 FILE_CI			    [<name of file>, auto]
 CONTINUUM_ID        [<name>, auto] //name of continuum shells in the basis file

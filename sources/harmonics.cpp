@@ -1,24 +1,22 @@
 #include "harmonics.h"
 
-double Harmonics::NoNormCalcClmR(const int &l, const int &m, const int &lx, const int &ly, const int &lz)
-{
+double Harmonics::NoNormCalcClmR(const int &l, const int &m, const int &lx, const int &ly, const int &lz) {
     if (lx + ly + lz != l)
         return 0.0;
 
-    if (m > 0)
-    {
+    if (m > 0) {
         int bs, am, lima, lim1b, lim2b, twol, twoa, twob;
         double val, fac, faci;
-        am = std::abs(m);
-        bs = l - lz - am;
+        am   = std::abs(m);
+        bs   = l - lz - am;
         twol = 2 * l;
         if (bs % 2 == 1 || bs < 0)
             return 0.0;
-        bs = bs / 2;
+        bs  = bs / 2;
         fac = M_SQRT2 * Const_arrays::omega[l][m] * Const_arrays::belt[am] / (std::pow(2.0, l) * Const_arrays::fact[l]);
 
-        lima = l - am;
-        lima = (lima % 2 == 0) ? lima / 2 : (lima - 1) / 2;
+        lima  = l - am;
+        lima  = (lima % 2 == 0) ? lima / 2 : (lima - 1) / 2;
         lim1b = lx - am;
         lim1b = (lim1b % 2 == 0) ? lim1b / 2 : (lim1b + 1) / 2;
         lim1b = std::max(lim1b, 0);
@@ -26,12 +24,10 @@ double Harmonics::NoNormCalcClmR(const int &l, const int &m, const int &lx, cons
         lim2b = std::min(lim2b, bs);
 
         val = 0.0;
-        for (int a = std::max(bs, 0); a <= lima; a++)
-        {
+        for (int a = std::max(bs, 0); a <= lima; a++) {
             twoa = 2 * a;
             faci = Const_arrays::binom[l][a] * Const_arrays::belt[a] * Const_arrays::fact[twol - twoa] * Const_arrays::binom[a][bs] / Const_arrays::fact[l - am - twoa];
-            for (int b = lim1b; b <= lim2b; b++)
-            {
+            for (int b = lim1b; b <= lim2b; b++) {
                 twob = 2 * b + am - lx;
                 if (twob % 2 == 1)
                     continue;
@@ -40,8 +36,7 @@ double Harmonics::NoNormCalcClmR(const int &l, const int &m, const int &lx, cons
         }
         return Const_arrays::belt[am] * val * fac / std::sqrt(2.0 * M_PI);
     }
-    if (m == 0)
-    {
+    if (m == 0) {
         int lxx, lxy, lim1a, lim2a, twoa, twol;
         lxx = lx;
         lxy = lx + ly;
@@ -53,32 +48,30 @@ double Harmonics::NoNormCalcClmR(const int &l, const int &m, const int &lx, cons
         lxx /= 2;
         lxy /= 2;
         double val, fac;
-        fac = std::sqrt((2 * l + 1) / 2.) * Const_arrays::binom[lxy][lxx] / (std::pow(2.0, l) * Const_arrays::fact[l]);
+        fac   = std::sqrt((2 * l + 1) / 2.) * Const_arrays::binom[lxy][lxx] / (std::pow(2.0, l) * Const_arrays::fact[l]);
         lim1a = lxy;
         lim2a = (l % 2 == 0) ? l / 2 : (l - 1) / 2;
 
         val = 0.0;
-        for (int a = lim1a; a <= lim2a; a++)
-        {
+        for (int a = lim1a; a <= lim2a; a++) {
             twoa = 2 * a;
             val += Const_arrays::binom[l][a] * Const_arrays::belt[a] * Const_arrays::fact[twol - twoa] * Const_arrays::binom[a][lxy] / Const_arrays::fact[l - twoa];
         }
         return val * fac / std::sqrt(2.0 * M_PI);
     }
-    if (m < 0)
-    {
+    if (m < 0) {
         int bs, am, lima, lim1b, lim2b, twol, twoa, twob;
         double val, fac, faci;
-        am = std::abs(m);
-        bs = l - lz - am;
+        am   = std::abs(m);
+        bs   = l - lz - am;
         twol = 2 * l;
         if (bs % 2 == 1 || bs < 0)
             return 0.0;
-        bs = bs / 2;
+        bs  = bs / 2;
         fac = -M_SQRT2 * Const_arrays::omega[l][am] * Const_arrays::belt[am] / (std::pow(2.0, l) * Const_arrays::fact[l]);
 
-        lima = l - am;
-        lima = (lima % 2 == 0) ? lima / 2 : (lima - 1) / 2;
+        lima  = l - am;
+        lima  = (lima % 2 == 0) ? lima / 2 : (lima - 1) / 2;
         lim1b = lx - am;
         lim1b = (lim1b % 2 == 0) ? lim1b / 2 : (lim1b + 1) / 2;
         lim1b = std::max(lim1b, 0);
@@ -86,12 +79,10 @@ double Harmonics::NoNormCalcClmR(const int &l, const int &m, const int &lx, cons
         lim2b = std::min(lim2b, bs);
 
         val = 0.0;
-        for (int a = std::max(bs, 0); a <= lima; a++)
-        {
+        for (int a = std::max(bs, 0); a <= lima; a++) {
             twoa = 2 * a;
             faci = Const_arrays::binom[l][a] * Const_arrays::belt[a] * Const_arrays::fact[twol - twoa] * Const_arrays::binom[a][bs] / Const_arrays::fact[l - am - twoa];
-            for (int b = lim1b; b <= lim2b; b++)
-            {
+            for (int b = lim1b; b <= lim2b; b++) {
                 twob = 2 * b + am - lx + 1;
                 if (twob % 2 == 1)
                     continue;
@@ -103,21 +94,18 @@ double Harmonics::NoNormCalcClmR(const int &l, const int &m, const int &lx, cons
     return 0;
 }
 
-double Harmonics::NoNormYrl(const int &l, const int &m, const Eigen::Vector3d &r)
-{
+double Harmonics::NoNormYrl(const int &l, const int &m, const Eigen::Vector3d &r) {
     double res = 0;
     int lz;
 
     for (int lx = 0; lx <= l; ++lx)
-        for (int ly = 0; ly <= l - lx; ++ly)
-        {
+        for (int ly = 0; ly <= l - lx; ++ly) {
             lz = l - lx - ly;
             res += NoNormCalcClmR(l, m, lx, ly, lz) * std::pow(r(0), lx) * std::pow(r(1), ly) * std::pow(r(2), lz);
         }
     return res;
 }
 
-double Harmonics::Y(const int &l, const int &m, const Eigen::Vector3d &r)
-{
+double Harmonics::Y(const int &l, const int &m, const Eigen::Vector3d &r) {
     return std::pow(r.norm(), l) * NoNormYrl(l, m, r);
 }
