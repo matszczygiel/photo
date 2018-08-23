@@ -10,7 +10,6 @@ constexpr std::size_t fact_s    = 15;
 constexpr std::size_t dfact_s   = 15;
 constexpr std::size_t binom_s   = 30;
 constexpr std::size_t omega_s   = 30;
-constexpr std::size_t crt_siz_s = 9;
 
 const std::array<int, belt_s> belt = []() {
     std::array<int, belt_s> belt;
@@ -57,13 +56,6 @@ const std::array<std::array<double, omega_s>, omega_s> omega = []() {
             omega[i][j] = std::sqrt((2.0 * i + 1) * fact[i - j] / (2.0 * fact[i + j]));
     }
     return omega;
-}();
-
-const std::array<unsigned, crt_siz_s> crt_siz = []() {
-    std::array<unsigned, crt_siz_s> crt_siz;
-    for (unsigned i = 0; i < crt_siz_s; i++)
-        crt_siz[i] = (i * i + 3 * i + 2) / 2;
-    return crt_siz;
 }();
 
 };  // namespace Const_arrays

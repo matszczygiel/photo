@@ -7,9 +7,6 @@ Iteration::status Iteration::one_step()
 {
 	// R matrices preparation
 
-	auto evalI = job->get_computeI();
-	auto evalC = job->get_computeC();
-
 	if (!(evalI || evalC))
 		return finished;
 

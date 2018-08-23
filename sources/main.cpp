@@ -123,16 +123,14 @@ int main(int argc, char *argv[])
 	auto Dynk = Dy.topLeftCorner(bnkl, bnkl);
 	auto Dznk = Dz.topLeftCorner(bnkl, bnkl);
 
-	complex<double> S_kI, S_pI, S_pk, Dx_pI, Dx_kI, Dy_pI, Dy_kI, Dz_pI, Dz_kI;
-
-	S_kI = vecC.dot(S.leftCols(bnkl) * grHF);
-	S_pI = veci.dot(Snk * grHF);
-	Dx_pI = veci.dot(Dxnk * grHF);
-	Dy_pI = veci.dot(Dynk * grHF);
-	Dz_pI = veci.dot(Dznk * grHF);
-	Dx_kI = vecC.dot(Dx.leftCols(bnkl) * grHF);
-	Dy_kI = vecC.dot(Dy.leftCols(bnkl) * grHF);
-	Dz_kI = vecC.dot(Dz.leftCols(bnkl) * grHF);
+	complex<double> S_kI = vecC.dot(S.leftCols(bnkl) * grHF);
+	complex<double> S_pI = veci.dot(Snk * grHF);
+	complex<double> Dx_pI = veci.dot(Dxnk * grHF);
+	complex<double> Dy_pI = veci.dot(Dynk * grHF);
+	complex<double> Dz_pI = veci.dot(Dznk * grHF);
+	complex<double> Dx_kI = vecC.dot(Dx.leftCols(bnkl) * grHF);
+	complex<double> Dy_kI = vecC.dot(Dy.leftCols(bnkl) * grHF);
+	complex<double> Dz_kI = vecC.dot(Dz.leftCols(bnkl) * grHF);
 
 	double r_pI_sqrt, r_kI_sqrt;
 

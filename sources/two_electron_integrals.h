@@ -232,6 +232,5 @@ class Tensor_2E {
 };
 
 typedef Tensor_2E<std::complex<double>> Tensor_2Ecd;
-typedef Tensor_2E<double> Tensor_2Ed;
 
 #endif  // TWO_ELECTRON_INTEGRALS_H

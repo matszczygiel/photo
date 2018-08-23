@@ -1,21 +1,21 @@
 COMPUTE_BOUND		[Y,N] //upper or lower case
 COMPUTE_CONTINUUM 	[Y,N] //upper or lower case
-COMPUTE_ION_STATE 	[Y,N] //upper or lower case
 
-K 		        	1.234  //for auto file naming
 ENERGY_I_STATE 		-2.665
 ENERGY_F_STATE		-2.0
 
 PATH_IN      	    <path>
-FILE_BASIS		    [<name of file>, auto] //text file with names of binary files  
-FILE_1E		    	[<name of file>, auto] //text file with names of binary files
-FILE_2E			    [<name of file>, auto] //text file with names of binary files
-FILE_NORM		    [<name of file>, auto] //text file with names of binary files
-FILE_HF_VEC		    [<name of file>, auto]
+FILES_BASIS		    [<name of file>, auto] //text file with names of binary files  
+FILES_1E		    	[<name of file>, auto] //text file with names of binary files
+FILES_2E			    [<name of file>, auto] //text file with names of binary files
+FILES_NORM		    [<name of file>, auto] //text file with names of binary files
+FILE_HF_I_VEC	    [<name of file>, auto]
 FILE_CI			    [<name of file>, auto]
+FILE_HF_F_VEC
+FILE_HF_F_EN
+
 CONTINUUM_ID        [<name>, auto] //name of continuum shells in the basis file
 
-ION_POTENTIAL		[compute, 0.64645] //upper or lower case
 SELECTION_METHOD	[energy, norm] //upper or lower case
 FORCE_ORTHOGONALITY	[Y,N] //upper or lower case
 GAUGE			    [velocity, dipole] //upper or lower case
