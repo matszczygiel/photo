@@ -13,10 +13,10 @@
 #include <boost/tokenizer.hpp>
 #include <eigen3/Eigen/Dense>
 
+#include "basis.h"
 #include "constants.h"
 #include "job_control.h"
 #include "two_electron_integrals.h"
-#include "basis.h"
 
 class Disk_reader {
    public:
@@ -64,17 +64,16 @@ class Disk_reader {
    protected:
     void read_file_basis();
     Eigen::MatrixXcd load_matrix1E_bin(const int &position) const;
-    void add_to_bl(const bool &cont, const Shell &moment);
 
    private:
-    static constexpr int matrices1E_number      = 20;
+    static constexpr int matrices1E_number = 20;
 
     std::shared_ptr<Job_control> job = nullptr;
     int basis_l                      = 0;
     int basis_lnk                    = 0;
     int lmax                         = 0;
     Status_t status                  = constructed;
-    Eigen::Vector3d kvec;
+    Eigen::Vector3d kvec             = {0, 0, 0};
 };
 
 #endif

@@ -5,14 +5,23 @@
 #include "disk_reader.h"
 #include "job_control.h"
 
+#include "eigen3/Eigen/Dense"
+
 class PhotoSCF {
    public:
+    enum status {
+        not_started,
+        ready,
+        running,
+        self_consistent,
+        finished,
+        iterations_limit
+    };
 
     PhotoSCF(const Job_control& job);
 
     void run();
-
-
+    status one_step();
 
    private:
     bool debug = true;
@@ -38,9 +47,7 @@ class PhotoSCF {
     Eigen::MatrixXcd U;
 
     bool energy_loaded = false;
-    double En;
+    double energy;
 };
-}
-;
 
 #endif
