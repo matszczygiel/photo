@@ -96,6 +96,7 @@ class Basis {
     double get_charge() const { return charge; };
     Vec3d get_kvec() const;
     std::string get_label() const { return label; };
+    
 
    private:
     std::vector<GTOPW> gtopws;

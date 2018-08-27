@@ -53,9 +53,9 @@ class Disk_reader {
     Eigen::MatrixXcd load_Grady() const;
     Eigen::MatrixXcd load_Gradz() const;
 
-    Eigen::MatrixXd load_HFv() const;
+    Eigen::MatrixXd load_HFv(const std::string &path) const;
     Eigen::MatrixXd load_CI() const;
-    Eigen::VectorXd load_HFe() const;
+    Eigen::VectorXd load_HFe(const std::string &path) const;
 
     Eigen::VectorXcd load_norms() const;
 

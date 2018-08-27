@@ -1,195 +1,280 @@
-#include "photo_scf.h"
-
+#include <cassert>
 #include <iostream>
 
-PhotoSCF::PhotoSCF(const Job_control& job) {
+#include "photo_scf.h"
+#include "functions.h"
+
+using namespace std;
+using namespace Eigen;
+
+PhotoSCF::PhotoSCF(const Job_control &job) {
     reader.initialize(job);
-    selection = job.get_selection_mth();
-    evalI = job.is_computeI();
-
+    evalI      = job.compute_bound;
+    evalC      = job.compute_cont;
+    selection  = job.selection_m;
+    force_orth = job.force_orth;
 }
 
+void PhotoSCF::run(const Eigen::VectorXcd &vec_ion,
+                   const Eigen::VectorXcd &vec_cont) {
+    assert(reader.is_ready());
 
-void PhotoSCF::run() {
+    bnkl = reader.get_basis_length_nk();
+    bl   = reader.get_basis_length();
+    bkl  = reader.get_basis_length_k();
 
+    vecI = VectorXcd::Zero(bl);
+    vecC = VectorXcd::Zero(bl);
+
+    vecI.head(bnkl)     = vec_ion;
+    vecC.tail(bkl)      = vec_cont;
+    starting_vec_loaded = true;
+
+    if (evalC || evalI)
+        Rints = reader.load_Rints();
+
+    H = reader.load_H();
+    S = reader.load_S();
+
+    Hnk = H.topLeftCorner(bnkl, bnkl).real();
+    Snk = S.topLeftCorner(bnkl, bnkl).real();
+
+    MatrixXd HF = reader.load_HFv().real();
+
+    if (force_orth) {
+        vecCrs.resize(bnkl);
+        vecCrs << 1.0, VectorXcd::Zero(bnkl - 1);
+        U = MatrixXcd::Zero(bl, bnkl);
+        U.col(0) << -(HF.col(0)).dot(S.topRightCorner(bnkl, bkl) * vecC.tail(bkl)) * HF.col(0),
+            vecC.tail(bkl);
+        U.block(0, 1, bnkl, bnkl - 1) << HF.rightCols(bnkl - 1);
+    } else {
+        vecCrs.resize(bnkl + 1);
+        vecCrs << 1.0, VectorXcd::Zero(bnkl);
+        U = MatrixXcd::Zero(bl, bnkl + 1);
+        U.col(0) << VectorXcd::Zero(bnkl), vecC.tail(bkl);
+        U.block(0, 1, bnkl, bnkl) << MatrixXd::Identity(bnkl, bnkl);
+    }
+
+    Str = U.adjoint() * S * U;
+
+    vecCr = vecCrs;
+    vecC  = U * vecCr;
+
+    vecIrs = vecI.head(bnkl);
+    vecIr  = vecIrs;
+
+    info            = ready;
+    matrices_loaded = true;
+
+    if (evalI || evalC) {
+        std::cout << "\n"
+                  << " Starting iteration.\n";
+
+        info = running;
+        while (info == running) {
+            iter_count++;
+            std::cout << "\n";
+            std::cout << "========= Iteration " << iter_count << " ============="
+                      << "\n\n";
+
+            info = one_step();
+
+            if (info == self_consistent) {
+                self_sc_cout++;
+                info = running;
+            } else
+                self_sc_cout = 0;
+
+            if (self_sc_cout == max_sc_count) {
+                info = finished;
+                break;
+            }
+            if (iter_count == max_iter_count) {
+                info = iterations_limit;
+                std::cout << " Iterations limit reached. \n";
+                break;
+            }
+            if (self_sc_cout != 0)
+                std::cout << "\n"
+                          << " Self consistency counter:" << self_sc_cout << "\n\n";
+        }
+        std::cout << "\n";
+        std::cout << " ======= End of iteration "
+                  << " ==========="
+                  << "\n\n";
+    }
 }
 
-PhotoSCF::status PhotoSCF::one_step()
+void PhotoSCF::free_ints()
 {
-	// R matrices preparation
+	Rints.resize(0);
+	H.resize(0, 0);
+	S.resize(0, 0);
+	Hnk.resize(0, 0);
+	Snk.resize(0, 0);
+	Str.resize(0, 0);
+	U.resize(0, 0);
+}
 
-	if (!(evalI || evalC))
-		return finished;
+PhotoSCF::status PhotoSCF::one_step() {
+    // R matrices preparation
+    auto kRk = Rints.contract(vecC, vecC, 0, 3);
+    auto kkR = Rints.contract(vecC, vecC, 0, 1);
+    auto ppR = Rints.contract(vecI, vecI, 0, 1);
+    auto pRp = Rints.contract(vecI, vecI, 0, 3);
 
-	auto kRk = Rints.contract(vecC, vecC, 0, 3);
-	auto kkR = Rints.contract(vecC, vecC, 0, 1);
-	auto ppR = Rints.contract(vecI, vecI, 0, 1);
-	auto pRp = Rints.contract(vecI, vecI, 0, 3);
+    // H matrix elements
+    auto Hpp = real(scalar_prod(vecI, H, vecI));
+    auto Hkk = real(scalar_prod(vecC, H, vecC));
+    auto Hpk = scalar_prod(vecI, H, vecC);
 
-	cout << " R matrices preparation done.\n\n";
+    // Print H matrix elements
 
-	// H matrix elements
+    cout << " Energy of the system is: " << energy << "\n";
+    cout << "\n"
+         << " H matrix elements: "
+         << "\n";
+    cout << " H_pp = " << Hpp << "\n"
+         << " H_kk = " << Hkk << "\n"
+         << " H_pk = " << Hpk << "\n\n";
 
-	auto Hpp = real(scalar_prod(vecI, H, vecI));
-	auto Hkk = real(scalar_prod(vecC, H, vecC));
-	auto Hpk = scalar_prod(vecI, H, vecC);
+    auto normC = real(scalar_prod(vecC, S, vecC));
+    auto normI = real(scalar_prod(vecI, S, vecI));
 
-	// Print H matrix elements
+    cout << "\n"
+         << " Norm squared of the continuum state is: " << normC << "\n";
+    cout << "\n"
+         << " Norm squared of the bound state is: " << normI << "\n";
 
-	cout << " Energy of the system is: " << En << "\n";
-	cout << "\n"
-		 << " H matrix elements: "
-		 << "\n";
-	cout << " H_pp = " << Hpp << "\n"
-		 << " H_kk = " << Hkk << "\n"
-		 << " H_pk = " << Hpk << "\n\n";
+    /// Compose the set of equation of form Ax=ESx
 
-	auto normC = real(scalar_prod(vecC, S, vecC));
-	auto normI = real(scalar_prod(vecI, S, vecI));
+    //A matrices prep
 
-	cout << "\n"
-		 << " Norm squared of the continuum state is: " << normC << "\n";
-	cout << "\n"
-		 << " Norm squared of the bound state is: " << normI << "\n";
+    MatrixXcd AmatI =
+        (normC * Hnk) + (H.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl)) +
+        (S.topRows(bnkl) * vecC) * (vecC.adjoint() * H.leftCols(bnkl)) +
+        Hkk * Snk + kRk + kkR;
 
-	/// Compose the set of equation of form Ax=ESx
+    MatrixXcd AmatC =
+        U.adjoint() *
+        (H + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR) *
+        U;
 
-	const int bl = read->get_basis_length();
-	const int bnkl = read->get_basis_length_nk();
-	//A matrices prep
+    if (job->get_force_orth())
+        assert(AmatC.rows() == bnkl);
+    else
+        assert(AmatC.rows() == (bnkl + 1));
 
-	MatrixXcd AmatI =
-		(normC * Hnk) + (H.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl)) +
-		(S.topRows(bnkl) * vecC) * (vecC.adjoint() * H.leftCols(bnkl)) +
-		Hkk * Snk + kRk + kkR;
+    cout << " A matrices preparation done.\n\n";
 
-	MatrixXcd AmatC =
-		U.adjoint() *
-		(H + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR) *
-		U;
+    //S matrices prep
 
-	if (job->get_force_orth())
-		assert(AmatC.rows() == bnkl);
-	else
-		assert(AmatC.rows() == (bnkl + 1));
+    MatrixXcd SmatI =
+        normI * Snk + (S.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl));
 
-	cout << " A matrices preparation done.\n\n";
+    MatrixXcd SmatC =
+        U.adjoint() *
+        (S + (S * vecI) * (vecI.adjoint() * S)) *
+        U;
 
-	//S matrices prep
+    cout << " S matrices preparation done. \n\n";
+    cout << " Solving eigenvalue problem. \n\n";
 
-	MatrixXcd SmatI =
-		normI * Snk + (S.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl));
+    double sel_paramC, seal_paramI;
 
-	MatrixXcd SmatC =
-		U.adjoint() *
-		(S + (S * vecI) * (vecI.adjoint() * S)) *
-		U;
+    auto method = job->get_selection_mth();
 
-	cout << " S matrices preparation done. \n\n";
-	cout << " Solving eigenvalue problem. \n\n";
+    VectorXcd vecIr_dum, vecCr_dum;
 
-	double sel_paramC, seal_paramI;
+    if (evalC) {
+        es.compute(AmatC, SmatC);
+        VectorXd temp;
+        int itC;
+        int sizeC = AmatC.cols();
 
-	auto method = job->get_selection_mth();
+        switch (method) {
+            case selection_mth_t::energy:
+                temp = es.eigenvalues() - En * VectorXd::Ones(es.eigenvalues().size());
+                temp = temp.cwiseAbs2();
+                temp.minCoeff(&itC);
+                cout << " Iterator to the matching sel_param of C: " << itC
+                     << " \n and it's enegry: " << es.eigenvalues()[itC] << "\n\n";
 
-	VectorXcd vecIr_dum, vecCr_dum;
+                break;
 
-	if (evalC)
-	{
-		es.compute(AmatC, SmatC);
-		VectorXd temp;
-		int itC;
-		int sizeC = AmatC.cols();
+            case selection_mth_t::norm:
+                temp.resize(sizeC);
+                for (int i = 0; i < sizeC; ++i) {
+                    vecCr_dum = es.eigenvectors().col(i) / es.eigenvectors()(0, i);
+                    temp(i)   = real(
+                        vecCr_dum.tail(sizeC - 1).dot(Str.bottomRightCorner(sizeC - 1, sizeC - 1) * vecCr_dum.tail(sizeC - 1)));
+                }
+                temp.minCoeff(&itC);
+                cout << " Iterator to the matching norm of 1eq: " << itC;
+                cout << "\n and it's energy: " << es.eigenvalues()[itC] << "\n\n";
+                break;
+        }
+        vecCr_dum = es.eigenvectors().col(itC) / es.eigenvectors()(0, itC);
+    }
 
-		switch (method)
-		{
-		case Job_control::selection_mth_t::energy:
-			temp = es.eigenvalues() - En * VectorXd::Ones(es.eigenvalues().size());
-			temp = temp.cwiseAbs2();
-			temp.minCoeff(&itC);
-			cout << " Iterator to the matching sel_param of C: " << itC
-				 << " \n and it's enegry: " << es.eigenvalues()[itC] << "\n\n";
+    if (evalI) {
+        es.compute(AmatI, SmatI);
+        VectorXd temp;
+        int itI;
 
-			break;
+        switch (method) {
+            case selection_mth_t::energy:
+                temp = es.eigenvalues() - En * VectorXd::Ones(es.eigenvalues().size());
+                temp = temp.cwiseAbs2();
+                temp.minCoeff(&itI);
+                cout << " Iterator to the matching Energy of 2eq: " << itI
+                     << " \n and it's enegry: " << es.eigenvalues()[itI] << "\n\n";
 
-		case Job_control::selection_mth_t::norm:
-			temp.resize(sizeC);
-			for (int i = 0; i < sizeC; ++i)
-			{
-				vecCr_dum = es.eigenvectors().col(i) / es.eigenvectors()(0, i);
-				temp(i) = real(
-					vecCr_dum.tail(sizeC - 1).dot(Str.bottomRightCorner(sizeC - 1, sizeC - 1) * vecCr_dum.tail(sizeC - 1)));
-			}
-			temp.minCoeff(&itC);
-			cout << " Iterator to the matching norm of 1eq: " << itC;
-			cout << "\n and it's energy: " << es.eigenvalues()[itC] << "\n\n";
-			break;
-		}
-		vecCr_dum = es.eigenvectors().col(itC) / es.eigenvectors()(0, itC);
-	}
+                break;
 
-	if (evalI)
-	{
-		es.compute(AmatI, SmatI);
-		VectorXd temp;
-		int itI;
+            case selection_mth_t::norm:
+                temp.resize(bnkl);
+                for (int i = 0; i < bnkl; ++i) {
+                    vecIr_dum = es.eigenvectors().col(i);
+                    vecIr_dum /= sqrt(real(vecIr_dum.dot(Snk * vecIr_dum)));
+                    temp(i) = norm(vecIrs.dot(Snk * vecIr_dum));
+                }
+                temp.maxCoeff(&itI);
+                cout << " Iterator to the matching norm of 1eq: " << itI;
+                cout << "\n and it's energy: " << es.eigenvalues()[itI] << "\n\n";
 
-		switch (method)
-		{
-		case Job_control::selection_mth_t::energy:
-			temp = es.eigenvalues() - En * VectorXd::Ones(es.eigenvalues().size());
-			temp = temp.cwiseAbs2();
-			temp.minCoeff(&itI);
-			cout << " Iterator to the matching Energy of 2eq: " << itI
-				 << " \n and it's enegry: " << es.eigenvalues()[itI] << "\n\n";
+                break;
+        }
 
-			break;
+        vecIr_dum = es.eigenvectors().col(itI);
+        vecIr_dum /= sqrt(real(vecIr_dum.dot(Snk * vecIr_dum)));
+    }
 
-		case Job_control::selection_mth_t::norm:
-			temp.resize(bnkl);
-			for (int i = 0; i < bnkl; ++i)
-			{
-				vecIr_dum = es.eigenvectors().col(i);
-				vecIr_dum /= sqrt(real(vecIr_dum.dot(Snk * vecIr_dum)));
-				temp(i) = norm(vecIrs.dot(Snk * vecIr_dum));
-			}
-			temp.maxCoeff(&itI);
-			cout << " Iterator to the matching norm of 1eq: " << itI;
-			cout << "\n and it's energy: " << es.eigenvalues()[itI] << "\n\n";
+    //Check for self consistency
 
-			break;
-		}
+    double conv_paramC = 0.0;
+    double conv_paramI = 0.0;
 
-		vecIr_dum = es.eigenvectors().col(itI);
-		vecIr_dum /= sqrt(real(vecIr_dum.dot(Snk * vecIr_dum)));
-	}
+    if (evalC) {
+        conv_paramC = (vecCr_dum.cwiseAbs() - vecCr.cwiseAbs()).norm();
+        cout << "\n Norm of difference for eq1: " << conv_paramC << "\n";
+        vecCr = vecCr_dum;
+    }
+    if (evalI) {
+        conv_paramI = (vecIr_dum.cwiseAbs() - vecIr.cwiseAbs()).norm();
+        cout << "\n Norm of difference for eq2: " << conv_paramI << "\n";
+        vecIr = vecIr_dum;
+    }
 
-	//Check for self consistency
+    vecC = U * vecCr;
+    vecI << vecIr, VectorXcd::Zero(bl - bnkl);
 
-	double conv_paramC = 0.0;
-	double conv_paramI = 0.0;
+    if (!(evalI && evalC))
+        return finished;
 
-	if (evalC)
-	{
-		conv_paramC = (vecCr_dum.cwiseAbs() - vecCr.cwiseAbs()).norm();
-		cout << "\n Norm of difference for eq1: " << conv_paramC << "\n";
-		vecCr = vecCr_dum;
-	}
-	if (evalI)
-	{
-		conv_paramI = (vecIr_dum.cwiseAbs() - vecIr.cwiseAbs()).norm();
-		cout << "\n Norm of difference for eq2: " << conv_paramI << "\n";
-		vecIr = vecIr_dum;
-	}
-
-	vecC = U * vecCr;
-	vecI << vecIr, VectorXcd::Zero(bl - bnkl);
-
-	if (!(evalI && evalC))
-		return finished;
-
-	if (conv_paramC < treshold && conv_paramI < treshold)
-		return self_consistent;
-	else
-		return running;
+    if (conv_paramC < treshold && conv_paramI < treshold)
+        return self_consistent;
+    else
+        return running;
 }

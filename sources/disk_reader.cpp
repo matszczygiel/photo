@@ -147,14 +147,12 @@ Tensor_2Ecd Disk_reader::load_Rints() const {
     return ints;
 }
 
-
-
-Eigen::MatrixXd Disk_reader::load_HFv() const {
+Eigen::MatrixXd Disk_reader::load_HFv(const std::string &path) const {
     assert(status == ready);
 
     Eigen::MatrixXd mat(basis_lnk, basis_lnk);
 
-    std::ifstream file(job->get_file_HFv());
+    std::ifstream file(path);
     if (!file.is_open())
         throw std::runtime_error("Cannot open the HFv file.");
 
@@ -164,6 +162,23 @@ Eigen::MatrixXd Disk_reader::load_HFv() const {
     file.close();
 
     return mat;
+}
+
+Eigen::VectorXd Disk_reader::load_HFe(const std::string &path) const {
+    assert(status == ready);
+
+    Eigen::VectorXd vec(basis_lnk);
+
+    std::ifstream file(path);
+    if (!file.is_open())
+        throw std::runtime_error("Cannot open the HFv file.");
+
+    for (int i = 0; i < basis_lnk; ++i)
+        file >> vec(i);
+
+    file.close();
+
+    return vec;
 }
 
 Eigen::MatrixXd Disk_reader::load_CI() const {

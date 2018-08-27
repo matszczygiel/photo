@@ -28,31 +28,38 @@ class Job_control {
     inline std::string get_file_1E() const { return path_in + file_1E; }
     inline std::string get_file_2E() const { return path_in + file_2E; }
     inline std::string get_file_norm() const { return path_in + file_norm; }
-    inline std::string get_file_HFv() const { return path_in + file_HFv; }
-    inline std::string get_file_CI() const { return path_in + file_CI; }
+    inline std::string get_file_HFv_I() const { return path_in + file_HFv_i; }
+    inline std::string get_file_HFv_I() const { return path_in + file_HFv_i; }
+    inline std::string get_file_HFe_F() const { return path_in + file_HFe_f; }
+    inline std::string get_file_CI_I() const { return path_in + file_CI_i; }
     inline std::string get_continuum_id() const { return continuum_id; }
     inline bool is_computeI() const { return compute_bound; }
     inline bool is_computeC() const { return compute_cont; }
-    inline double get_energy_f() const { return energy_f; }
+    inline double get_energy_i() const { return energy_i; }
+    inline double get_photon() const { return photonEeV; };
+    inline double get_nucl_rep_en() const { return 1. / R; };
 
-    inline gauge_t get_gauge() const { return gauge; }
-    inline selection_mth_t get_selection_mth() const { return selection_m; }
-    inline bool is_force_orth() const { return force_orth; }
+    friend class PhotoSCF;
 
    private:
     bool compute_bound;
     bool compute_cont;
 
     double energy_i;
-    double energy_f;
+    double photonEv;
+    double R;
 
     std::string path_in;
     std::string file_basis;
     std::string file_1E;
     std::string file_2E;
     std::string file_norm;
-    std::string file_HFv;
-    std::string file_CI;
+
+    std::string file_HFv_i;
+    std::string file_CI_i;
+
+    std::string file_HFv_f;
+    std::string file_HFe_f;
 
     std::string continuum_id;
 

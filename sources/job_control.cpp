@@ -5,7 +5,6 @@ Job_control::Job_control()
 {
     compute_bound = false;
     compute_cont = false;
-    compute_ion_state = false;
 
     file_HFv = "c.dat";
     file_CI = "ci.dat";
