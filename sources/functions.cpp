@@ -6,7 +6,6 @@
 #include <string>
 
 #include "functions.h"
-#include "rec.h"
 #include "constants.h"
 #include "harmonics.h"
 

@@ -96,16 +96,15 @@ double Harmonics::NoNormCalcClmR(const int &l, const int &m, const int &lx, cons
 
 double Harmonics::NoNormYrl(const int &l, const int &m, const Eigen::Vector3d &r) {
     double res = 0;
-    int lz;
 
     for (int lx = 0; lx <= l; ++lx)
         for (int ly = 0; ly <= l - lx; ++ly) {
-            lz = l - lx - ly;
+            int lz = l - lx - ly;
             res += NoNormCalcClmR(l, m, lx, ly, lz) * std::pow(r(0), lx) * std::pow(r(1), ly) * std::pow(r(2), lz);
         }
     return res;
 }
 
 double Harmonics::Y(const int &l, const int &m, const Eigen::Vector3d &r) {
-    return std::pow(r.norm(), l) * NoNormYrl(l, m, r);
+    return NoNormYrl(l, m, r) / std::pow(r.norm(), l);
 }

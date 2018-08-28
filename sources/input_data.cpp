@@ -3,7 +3,7 @@
 #include <regex>
 #include <stdexcept>
 
-void Input_data::read_input(std::ifstream &input_file) {
+Input_data::Input_data(std::ifstream &input_file) {
     if (!input_file.is_open())
         throw std::runtime_error("Input file is not open!");
 
@@ -17,7 +17,16 @@ void Input_data::read_input(std::ifstream &input_file) {
         std::sregex_token_iterator beg(line.begin(), line.end(), reg, -1);
         std::sregex_token_iterator end;
 
-        std::vector<std::string> vec(beg, end);
-        keys.insert(std::make_pair(vec.at(0), vec.at(1)));
+        std::string key = *beg;
+        std::vector<std::string> vec(++beg, end);
+        keys.insert(std::make_pair(key, vec));
     }
+}
+
+std::string Input_data::first(const std::string &key) const {
+    return keys.at(key).at(0);
+}
+
+std::string Input_data::second(const std::string &key) const {
+    return keys.at(key).at(1);
 }

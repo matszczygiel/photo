@@ -1,60 +1,82 @@
 #include <cassert>
 #include <iostream>
+#include <stdexcept>
 
-#include "photo_scf.h"
 #include "functions.h"
+#include "photo_scf.h"
 
 using namespace std;
 using namespace Eigen;
 
-PhotoSCF::PhotoSCF(const Job_control &job) {
-    reader.initialize(job);
-    evalI      = job.compute_bound;
-    evalC      = job.compute_cont;
-    selection  = job.selection_m;
-    force_orth = job.force_orth;
+PhotoSCF::PhotoSCF(const Input_data &data, const std::string &k)
+    : reader(data) {
+    char token;
+    std::string arg = "COMPUTE_BOUND";
+
+    token = std::tolower(*data.first(arg).begin());
+    if (token == 'y')
+        evalI = true;
+    else if (token == 'n')
+        evalI = false;
+    else
+        throw std::runtime_error("Invalid argument for" + arg + ".");
+
+    arg = "COMPUTE_CONTINUUM";
+
+    token = std::tolower(*data.first(arg).begin());
+    if (token == 'y')
+        evalC = true;
+    else if (token == 'n')
+        evalC = false;
+    else
+        throw std::runtime_error("Invalid argument for" + arg + ".");
+
+    arg = "SELECTION_METHOD";
+
+    if (data.first(arg) == "energy")
+        selection = by_energy;
+    else if (data.first(arg) == "norm")
+        selection = by_norm;
+    else
+        throw std::runtime_error("Invalid argument for" + arg + ".");
+
+    path_2eints = data.first("PATH_IN") + data.first("FILES_2E") + k + data.second("FILES_2E");
+    path_1eints = data.first("PATH_IN") + data.first("FILES_1E") + k + data.second("FILES_1E");
+
+    auto en_i = std::stof(data.first("ENERGY_I_STATE"));
+    en_i -= 1. / std::stof(data.first("R"));
+
+    double photon = std::stof(data.first("PHOTON_EN")) / 27.211385;
+
+    energy = en_i + photon;
+
+    bnkl = std::stoi(data.first("NUMBER_GTO"));
+    bkl  = std::stoi(data.first("NUMBER_PWGTO"));
+    bl   = bnkl + bkl;
 }
 
 void PhotoSCF::run(const Eigen::VectorXcd &vec_ion,
                    const Eigen::VectorXcd &vec_cont) {
-    assert(reader.is_ready());
-
-    bnkl = reader.get_basis_length_nk();
-    bl   = reader.get_basis_length();
-    bkl  = reader.get_basis_length_k();
-
     vecI = VectorXcd::Zero(bl);
     vecC = VectorXcd::Zero(bl);
 
-    vecI.head(bnkl)     = vec_ion;
-    vecC.tail(bkl)      = vec_cont;
-    starting_vec_loaded = true;
+    vecI.head(bnkl) = vec_ion;
+    vecC.tail(bkl)  = vec_cont;
 
     if (evalC || evalI)
-        Rints = reader.load_Rints();
+        Rints = reader.load_Rints(path_2eints);
 
-    H = reader.load_H();
-    S = reader.load_S();
+    H = reader.load_H(path_1eints);
+    S = reader.load_S(path_1eints);
 
     Hnk = H.topLeftCorner(bnkl, bnkl).real();
     Snk = S.topLeftCorner(bnkl, bnkl).real();
 
-    MatrixXd HF = reader.load_HFv().real();
-
-    if (force_orth) {
-        vecCrs.resize(bnkl);
-        vecCrs << 1.0, VectorXcd::Zero(bnkl - 1);
-        U = MatrixXcd::Zero(bl, bnkl);
-        U.col(0) << -(HF.col(0)).dot(S.topRightCorner(bnkl, bkl) * vecC.tail(bkl)) * HF.col(0),
-            vecC.tail(bkl);
-        U.block(0, 1, bnkl, bnkl - 1) << HF.rightCols(bnkl - 1);
-    } else {
-        vecCrs.resize(bnkl + 1);
-        vecCrs << 1.0, VectorXcd::Zero(bnkl);
-        U = MatrixXcd::Zero(bl, bnkl + 1);
-        U.col(0) << VectorXcd::Zero(bnkl), vecC.tail(bkl);
-        U.block(0, 1, bnkl, bnkl) << MatrixXd::Identity(bnkl, bnkl);
-    }
+    vecCrs.resize(bnkl + 1);
+    vecCrs << 1.0, VectorXcd::Zero(bnkl);
+    U = MatrixXcd::Zero(bl, bnkl + 1);
+    U.col(0) << VectorXcd::Zero(bnkl), vecC.tail(bkl);
+    U.block(0, 1, bnkl, bnkl) << MatrixXd::Identity(bnkl, bnkl);
 
     Str = U.adjoint() * S * U;
 
@@ -64,8 +86,7 @@ void PhotoSCF::run(const Eigen::VectorXcd &vec_ion,
     vecIrs = vecI.head(bnkl);
     vecIr  = vecIrs;
 
-    info            = ready;
-    matrices_loaded = true;
+    info = ready;
 
     if (evalI || evalC) {
         std::cout << "\n"
@@ -106,15 +127,14 @@ void PhotoSCF::run(const Eigen::VectorXcd &vec_ion,
     }
 }
 
-void PhotoSCF::free_ints()
-{
-	Rints.resize(0);
-	H.resize(0, 0);
-	S.resize(0, 0);
-	Hnk.resize(0, 0);
-	Snk.resize(0, 0);
-	Str.resize(0, 0);
-	U.resize(0, 0);
+void PhotoSCF::free_ints() {
+    Rints.resize(0);
+    H.resize(0, 0);
+    S.resize(0, 0);
+    Hnk.resize(0, 0);
+    Snk.resize(0, 0);
+    Str.resize(0, 0);
+    U.resize(0, 0);
 }
 
 PhotoSCF::status PhotoSCF::one_step() {
@@ -161,10 +181,7 @@ PhotoSCF::status PhotoSCF::one_step() {
         (H + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR) *
         U;
 
-    if (job->get_force_orth())
-        assert(AmatC.rows() == bnkl);
-    else
-        assert(AmatC.rows() == (bnkl + 1));
+    assert(AmatC.rows() == (bnkl + 1));
 
     cout << " A matrices preparation done.\n\n";
 
@@ -181,9 +198,7 @@ PhotoSCF::status PhotoSCF::one_step() {
     cout << " S matrices preparation done. \n\n";
     cout << " Solving eigenvalue problem. \n\n";
 
-    double sel_paramC, seal_paramI;
-
-    auto method = job->get_selection_mth();
+    Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXcd> es;
 
     VectorXcd vecIr_dum, vecCr_dum;
 
@@ -193,9 +208,9 @@ PhotoSCF::status PhotoSCF::one_step() {
         int itC;
         int sizeC = AmatC.cols();
 
-        switch (method) {
-            case selection_mth_t::energy:
-                temp = es.eigenvalues() - En * VectorXd::Ones(es.eigenvalues().size());
+        switch (selection) {
+            case selection_mth_t::by_energy:
+                temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 temp = temp.cwiseAbs2();
                 temp.minCoeff(&itC);
                 cout << " Iterator to the matching sel_param of C: " << itC
@@ -203,7 +218,7 @@ PhotoSCF::status PhotoSCF::one_step() {
 
                 break;
 
-            case selection_mth_t::norm:
+            case selection_mth_t::by_norm:
                 temp.resize(sizeC);
                 for (int i = 0; i < sizeC; ++i) {
                     vecCr_dum = es.eigenvectors().col(i) / es.eigenvectors()(0, i);
@@ -223,9 +238,9 @@ PhotoSCF::status PhotoSCF::one_step() {
         VectorXd temp;
         int itI;
 
-        switch (method) {
-            case selection_mth_t::energy:
-                temp = es.eigenvalues() - En * VectorXd::Ones(es.eigenvalues().size());
+        switch (selection) {
+            case selection_mth_t::by_energy:
+                temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 temp = temp.cwiseAbs2();
                 temp.minCoeff(&itI);
                 cout << " Iterator to the matching Energy of 2eq: " << itI
@@ -233,12 +248,12 @@ PhotoSCF::status PhotoSCF::one_step() {
 
                 break;
 
-            case selection_mth_t::norm:
+            case selection_mth_t::by_norm:
                 temp.resize(bnkl);
                 for (int i = 0; i < bnkl; ++i) {
                     vecIr_dum = es.eigenvectors().col(i);
                     vecIr_dum /= sqrt(real(vecIr_dum.dot(Snk * vecIr_dum)));
-                    temp(i) = norm(vecIrs.dot(Snk * vecIr_dum));
+                    temp(i) = std::norm(vecIrs.dot(Snk * vecIr_dum));
                 }
                 temp.maxCoeff(&itI);
                 cout << " Iterator to the matching norm of 1eq: " << itI;

@@ -26,10 +26,6 @@ class Tensor_2E {
     enum position { positive,
                     negaive };
 
-    Tensor_2E() = default;
-
-    inline const unsigned get_size() const { return size; }
-
     void free() {
         if (pos_cubes == nullptr && neg_cubes == nullptr) {
             size = 0;
@@ -59,8 +55,6 @@ class Tensor_2E {
         size = 0;
     }
 
-    ~Tensor_2E() { free(); }
-
     void resize(const int& s) {
         assert(s >= 0);
 
@@ -88,6 +82,73 @@ class Tensor_2E {
             }
         }
     }
+
+    Tensor_2E() = default;
+
+    Tensor_2E(Tensor_2E& other) {
+        resize(other.size);
+        for (unsigned i = 0; i < size; ++i) {
+            for (unsigned it1 = 0; it1 < size - i; ++it1)
+                for (unsigned it2 = 0; it2 < size - i; ++it2)
+                    std::copy(&other.pos_cubes[i][it1][it2][0],
+                              &other.pos_cubes[i][it1][it2][size - i],
+                              pos_cubes[i][it1][it2]);
+
+            for (unsigned it1 = 0; it1 < i; ++it1)
+                for (unsigned it2 = 0; it2 < i; ++it2)
+                    std::copy(&other.neg_cubes[i][it1][it2][0],
+                              &other.neg_cubes[i][it1][it2][i],
+                              neg_cubes[i][it1][it2]);
+        }
+    }
+
+    Tensor_2E& operator=(Tensor_2E& other) {
+        if (this != &other) {
+            free();
+            resize(other.size);
+
+            for (unsigned i = 0; i < size; ++i) {
+                for (unsigned it1 = 0; it1 < size - i; ++it1)
+                    for (unsigned it2 = 0; it2 < size - i; ++it2)
+                        std::copy(&other.pos_cubes[i][it1][it2][0],
+                                  &other.pos_cubes[i][it1][it2][size - i],
+                                  pos_cubes[i][it1][it2]);
+
+                for (unsigned it1 = 0; it1 < i; ++it1)
+                    for (unsigned it2 = 0; it2 < i; ++it2)
+                        std::copy(&other.neg_cubes[i][it1][it2][0],
+                                  &other.neg_cubes[i][it1][it2][i],
+                                  neg_cubes[i][it1][it2]);
+            }
+        }
+        return *this;
+    }
+
+    Tensor_2E& operator=(Tensor_2E&& other) {
+        if (this != &other) {
+            free();
+            pos_cubes = std::move(other.pos_cubes);
+            neg_cubes = std::move(other.neg_cubes);
+            size = std::move(other.size);
+            other.neg_cubes = nullptr;
+            other.pos_cubes = nullptr;
+            other.size      = 0;
+        }
+        return *this;
+    }
+
+    Tensor_2E(Tensor_2E&& other)
+        : pos_cubes(std::move(other.pos_cubes)),
+          neg_cubes(std::move(other.neg_cubes)),
+          size(std::move(other.size)) {
+        other.neg_cubes = nullptr;
+        other.pos_cubes = nullptr;
+        other.size      = 0;
+    }
+
+    ~Tensor_2E() { free(); }
+
+    inline const unsigned get_size() const { return size; }
 
     void zero() {
         for (unsigned i = 0; i < size; ++i) {

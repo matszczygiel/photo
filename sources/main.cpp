@@ -24,111 +24,48 @@
 #include <stdexcept>
 #include <string>
 
-#include "calculator.h"
 #include "constants.h"
 #include "disk_reader.h"
+#include "gamess.h"
 #include "harmonics.h"
-#include "job_control.h"
-#include "rec.h"
 #include "two_electron_integrals.h"
+#include "photo_scf.h"
 
 using namespace std;
 using namespace Eigen;
 
 int main(int argc, char *argv[]) {
     auto start = chrono::system_clock::now();
-
+    /*
     if (argc < 2) {
         cout << " Proper usage: ./rec <input name> <settings>\n";
         return EXIT_SUCCESS;
     }
+*/
+    //string input = argv[1];
+    string input = "/home/mateusz/workspace/photo/test.inp";
+    ifstream ifile(input);
+    const Input_data data(ifile);
+    ifile.close();
 
-    string input = argv[1];
-    if (argc > 2)
-        string setting = argv[2];
+    const Disk_reader reader(data);
 
-    Job_control controler;
-    Input_data in_data;
-    Disk_reader reader;
+    string orbs_f = data.first("PATH_IN") + data.first("FILE_HF_F_VEC");
+    string enrg_f = data.first("PATH_IN") + data.first("FILE_HF_F_EN");
 
-    cout << scientific;
     cout.precision(5);
 
-    try {
-        ifstream ifile(input);
-        if (!ifile.is_open())
-            throw runtime_error("Invalid input file parsed.");
+    ////////////////////////////
 
-        in_data.read_input(ifile);
-        ifile.close();
+    auto orbitals_ion  = reader.load_HFv(orbs_f);
+    auto energies_ion = reader.load_HFe(enrg_f);
 
-        controler.read(in_data);
-        reader.initialize(controler);
-    } catch (exception &e) {
-        cerr << e.what() << "\n";
-        return EXIT_FAILURE;
-    }
+    auto en_i = std::stof(data.first("ENERGY_I_STATE"));
+    en_i -= 1. / std::stof(data.first("R"));
 
-    double energy = calc.energy();
-    auto vec_cont = calc.continuum_vec();
-    VectorXd vec_ion;
-    VectorXd grHF = reader.load_HFv().col(0);
+    double photon = std::stof(data.first("PHOTON_EN")) / 27.211385;
 
-    if (controler.get_compute_ion_state())
-        vec_ion = calc.bound_vec();
-    else
-        vec_ion = grHF;
-
-    try {
-        iter.set_energy(energy);
-        iter.set_starting_vecs(vec_ion, vec_cont);
-        iter.load_matrices();
-    } catch (exception &e) {
-        cerr << e.what() << "\n";
-        return EXIT_FAILURE;
-    }
-/*
-    /////////////////
-    auto norms = reader.load_norms();
-    auto lmax  = reader.get_lmax();
-    auto kvec  = reader.get_kvec();
-
-    std::vector<std::vector<std::vector<double>>> Dfact(lmax + 1);
-
-    for (int l = 0; l <= lmax; l++)
-        Dfact[l].resize(l + 1);
-    for (int l = 0; l <= lmax; l++)
-        for (int p = 0; p <= l; p++)
-            Dfact[l][p].resize(l - p + 1, 0.0);
-
-    using std::pow;
-    using std::sqrt;
-
-    for (int l = 0; l <= lmax; l++)
-        for (int p = 0; p <= l; p++)
-            for (int q = 0; q <= l - p; q++) {
-                for (int m = -l; m <= l; m++)
-                    Dfact[l][p][q] += Harmonics::NoNormCalcClmR(l, m, p, q, l - p - q) * Harmonics::Y(l, m, kvec);
-                Dfact[l][p][q] *= pow(M_PI, 0.25) * sqrt(Const_arrays::dfact[p] * Const_arrays::dfact[q] * Const_arrays::dfact[l - p - q]) / pow(2.0, 0.25 + l);
-            };
-
-    std::vector<std::complex<double>> vec_cont =
-        Gamess::order_set<std::complex<double>, double>(Dfact);
-
-    Eigen::VectorXcd vec = Eigen::Map<Eigen::VectorXcd>(vec_cont.data(), vec_cont.size());
-    for (int i = 0; i < vec.size(); i++)
-        vec(i) /= norms.tail(vec.size())(i);
-
-    VectorXcd cont_vec = vec;
-    //////////////////
-*/
-    auto orbials_ion  = reader.load_HFv(job.get_file_HFv_F());
-    auto energies_ion = reder.load_HFe(job.get_file_HFe_F());
-
-    auto en_i = job.get_energy_i();
-    en_i -= job.get_nucl_rep_en();
-
-    double en_final = en_i + job.get_photon();
+    double en_final = en_i + photon;
 
     vector<int> indices;
     vector<double> kvals;
@@ -139,7 +76,82 @@ int main(int argc, char *argv[]) {
         } else
             break;
     }
-/*
+
+    cout << "K:  ";
+    for (auto &x : kvals)
+        cout << x << "  ";
+    cout << "\n";
+
+    ///////////////////////////////
+
+    if (kvals.size() != 1)
+        return 0;
+
+    std::stringstream stream;
+    stream << std::fixed << std::setprecision(3) << kvals[0];
+    std::string k_str = stream.str();
+
+    string norms_file = data.first("PATH_IN") + data.first("FILES_NORM") + k_str + data.second("FILES_NORM");
+
+    auto norms = reader.load_norms(norms_file);
+    cout << norms;
+    auto lmax  = std::stoi(data.first("MAX_L"));
+
+    Vector3d kvec;
+    double theta = std::stof(data.first("K_THETA"));
+    double phi   = std::stof(data.first("K_PHI"));
+
+    kvec(0) = kvals[0] * sin(theta) * cos(phi);
+    kvec(1) = kvals[0] * sin(theta) * sin(phi);
+    kvec(2) = kvals[0] * cos(theta);
+
+    std::vector<std::vector<std::vector<double>>> Dfact(lmax + 1);
+
+    for (int l = 0; l <= lmax; l++)
+        Dfact[l].resize(l + 1);
+    for (int l = 0; l <= lmax; l++)
+        for (int p = 0; p <= l; p++)
+            Dfact[l][p].resize(l - p + 1);
+
+    using std::pow;
+    using std::sqrt;
+
+    for (int l = 0; l <= lmax; l++)
+        for (int p = 0; p <= l; p++)
+            for (int q = 0; q <= l - p; q++) {
+                Dfact[l][p][q] = 0.0;
+                for (int m = -l; m <= l; m++)
+                    Dfact[l][p][q] += Harmonics::NoNormCalcClmR(l, m, p, q, l - p - q) * Harmonics::Y(l, m, kvec);
+                Dfact[l][p][q] *= pow(M_PI, 0.25) * sqrt(Const_arrays::dfact[p] * Const_arrays::dfact[q] * Const_arrays::dfact[l - p - q]) / pow(2.0, 0.25 + l);
+            };
+
+    std::vector<std::complex<double>> vec_cont = Gamess::order_set<std::complex<double>, double>(Dfact);
+
+    Eigen::VectorXcd vec = Eigen::Map<Eigen::VectorXcd>(vec_cont.data(), vec_cont.size());
+    for (int i = 0; i < vec.size(); i++)
+        vec(i) /= norms.tail(vec.size())(i);
+
+    VectorXcd cont_vec = vec;
+    cout << cont_vec;
+
+    //////////////////////
+
+    PhotoSCF sys(data, k_str);
+    sys.run(orbitals_ion.col(0), cont_vec);
+
+    //////////////////////////////////
+    /*
+    PhotoSCF photo(controler);
+
+    photo.set energy(en_final);
+
+    photo.path_ints = ;
+    photo.path_Rints = ;
+    photo.path_HFv = ;
+
+    photo.run();
+*/
+    /*
     iter.iterate();
 
     iter.free_ints();
@@ -298,7 +310,8 @@ int main(int argc, char *argv[]) {
 	cout << " CI sigma: " << sig << "\n";
 	*/
     // successful exit
-    auto end                                 = chrono::system_clock::now();
+    auto end = chrono::system_clock::now();
+
     chrono::duration<double> elapsed_seconds = end - start;
     cout << " CPU time: " << setprecision(5) << fixed << elapsed_seconds.count() << " s\n";
     cout << "=========================================================================="

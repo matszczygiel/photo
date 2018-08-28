@@ -1,55 +1,26 @@
 #include "disk_reader.h"
 
-void Disk_reader::initialize(const Job_control &jc) {
-    job    = std::make_shared<Job_control>(jc);
-    status = initialized;
-    read_file_basis();
+#include <algorithm>
+#include <stdexcept>
+#include <fstream>
+#include <complex>
+
+
+Disk_reader::Disk_reader(const Input_data &data) {
+    auto bnkl = std::stoi(data.first("NUMBER_GTO"));
+    auto bkl = std::stoi(data.first("NUMBER_PWGTO"));
+    
+    basis_lnk = bnkl;    
+    basis_l = bnkl + bkl;
 }
 
-void Disk_reader::read_file_basis() {
-    assert(status == initialized);
 
-    std::ifstream bfile(job->get_file_basis());
-    if (!bfile.is_open())
-        throw std::runtime_error("Cannot open the basis file.");
-
-    for (std::string line; std::getline(bfile, line);)
-        if (line == "$BASIS")
-            break;
-
-    std::vector<Basis> basis;
-    Basis b;
-    int basis_cont_l = 0;
-    basis_l          = 0;
-    lmax             = 0;
-    while (b.read(bfile)) {
-        basis.push_back(b);
-        basis_l += b.functions_number();
-        int max_shl = shell2int(b.get_max_shell());
-        if (max_shl > lmax)
-            lmax = max_shl;
-        if (b.get_label() == "CONT") {
-            kvec(0) = b.get_kvec()[0];
-            kvec(1) = b.get_kvec()[1];
-            kvec(2) = b.get_kvec()[2];
-            basis_cont_l += b.functions_number();
-        }
-    }
-
-    bfile.close();
-
-    basis_lnk = basis_l - basis_cont_l;
-    status    = ready;
-}
-
-Eigen::MatrixXcd Disk_reader::load_matrix1E_bin(const int &position) const {
-    assert(status == ready);
-
-    std::ifstream file1E(job->get_file_1E(), std::ios::in | std::ios::binary | std::ios::ate);
+Eigen::MatrixXcd Disk_reader::load_matrix1E_bin(const std::string &path, const int &position) const {
+    std::ifstream file1E(path, std::ios::in | std::ios::binary | std::ios::ate);
     if (!file1E.is_open())
         throw std::runtime_error("Unable to open 1E file.");
 
-    auto bl_sqrt = get_basis_length_sqrt();
+    auto bl_sqrt = basis_l * basis_l;
 
     std::streampos size1E = file1E.tellg();
     int complex_size      = size1E * sizeof(char) / sizeof(double);
@@ -77,42 +48,40 @@ Eigen::MatrixXcd Disk_reader::load_matrix1E_bin(const int &position) const {
     return ints.transpose();
 }
 
-Eigen::MatrixXcd Disk_reader::load_S() const {
-    return load_matrix1E_bin(0);
+Eigen::MatrixXcd Disk_reader::load_S(const std::string &path) const {
+    return load_matrix1E_bin(path, 0);
 }
 
-Eigen::MatrixXcd Disk_reader::load_H() const {
-    return load_matrix1E_bin(3);
+Eigen::MatrixXcd Disk_reader::load_H(const std::string &path) const {
+    return load_matrix1E_bin(path, 3);
 }
 
-Eigen::MatrixXcd Disk_reader::load_Dipx() const {
-    return load_matrix1E_bin(4);
+Eigen::MatrixXcd Disk_reader::load_Dipx(const std::string &path) const {
+    return load_matrix1E_bin(path, 4);
 }
 
-Eigen::MatrixXcd Disk_reader::load_Dipy() const {
-    return load_matrix1E_bin(5);
+Eigen::MatrixXcd Disk_reader::load_Dipy(const std::string &path) const {
+    return load_matrix1E_bin(path, 5);
 }
 
-Eigen::MatrixXcd Disk_reader::load_Dipz() const {
-    return load_matrix1E_bin(6);
+Eigen::MatrixXcd Disk_reader::load_Dipz(const std::string &path) const {
+    return load_matrix1E_bin(path, 6);
 }
 
-Eigen::MatrixXcd Disk_reader::load_Gradx() const {
-    return load_matrix1E_bin(13);
+Eigen::MatrixXcd Disk_reader::load_Gradx(const std::string &path) const {
+    return load_matrix1E_bin(path, 13);
 }
 
-Eigen::MatrixXcd Disk_reader::load_Grady() const {
-    return load_matrix1E_bin(14);
+Eigen::MatrixXcd Disk_reader::load_Grady(const std::string &path) const {
+    return load_matrix1E_bin(path, 14);
 }
 
-Eigen::MatrixXcd Disk_reader::load_Gradz() const {
-    return load_matrix1E_bin(15);
+Eigen::MatrixXcd Disk_reader::load_Gradz(const std::string &path) const {
+    return load_matrix1E_bin(path, 15);
 }
 
-Tensor_2Ecd Disk_reader::load_Rints() const {
-    assert(status == ready);
-
-    std::ifstream file2E(job->get_file_2E(), std::ios::in | std::ios::binary | std::ios::ate);
+Tensor_2Ecd Disk_reader::load_Rints(const std::string &path) const {
+    std::ifstream file2E(path, std::ios::in | std::ios::binary | std::ios::ate);
     if (!file2E.is_open())
         throw std::runtime_error("Cannot open the 2E file.");
 
@@ -137,18 +106,13 @@ Tensor_2Ecd Disk_reader::load_Rints() const {
         file2E.read(reinterpret_cast<char *>(&re), sizeof(double));
         file2E.read(reinterpret_cast<char *>(&im), sizeof(double));
 
-        --indi;
-        --indj;
-        --indk;
-        --indl;
-        ints.assign(indi, indj, indk, indl, std::complex<double>(re, im));
+        ints.assign(--indi, --indj, --indk, --indl, std::complex<double>(re, im));
     }
     file2E.close();
     return ints;
 }
 
 Eigen::MatrixXd Disk_reader::load_HFv(const std::string &path) const {
-    assert(status == ready);
 
     Eigen::MatrixXd mat(basis_lnk, basis_lnk);
 
@@ -156,17 +120,15 @@ Eigen::MatrixXd Disk_reader::load_HFv(const std::string &path) const {
     if (!file.is_open())
         throw std::runtime_error("Cannot open the HFv file.");
 
-    for (int i = 0; i < get_basis_length_nk_sqrt(); ++i)
+    auto size = basis_lnk * basis_lnk;
+    for (int i = 0; i < size; ++i)
         file >> mat.data()[i];
 
     file.close();
-
     return mat;
 }
 
 Eigen::VectorXd Disk_reader::load_HFe(const std::string &path) const {
-    assert(status == ready);
-
     Eigen::VectorXd vec(basis_lnk);
 
     std::ifstream file(path);
@@ -181,13 +143,11 @@ Eigen::VectorXd Disk_reader::load_HFe(const std::string &path) const {
     return vec;
 }
 
-Eigen::MatrixXd Disk_reader::load_CI() const {
-    assert(status == ready);
-
+Eigen::MatrixXd Disk_reader::load_CI(const std::string &path) const {
     Eigen::MatrixXd mat(basis_lnk, basis_lnk);
     mat.setZero();
 
-    std::ifstream file(job->get_file_CI());
+    std::ifstream file(path);
     if (!file.is_open())
         throw std::runtime_error("Cannot open the CI file.");
 
@@ -208,19 +168,15 @@ Eigen::MatrixXd Disk_reader::load_CI() const {
     return mat;
 }
 
-Eigen::VectorXcd Disk_reader::load_norms() const {
-    assert(status == ready);
+Eigen::VectorXd Disk_reader::load_norms(const std::string &path) const {
+    Eigen::VectorXd vec(basis_l);
 
-    Eigen::VectorXcd vec(basis_l);
-
-    std::ifstream file(job->get_file_norm(), std::ios::in | std::ios::binary | std::ios::ate);
+    std::ifstream file(path, std::ios::in | std::ios::binary | std::ios::ate);
     if (!file.is_open())
         throw std::runtime_error("Cannot open the norms file.");
 
     std::streampos size = file.tellg();
     int double_size     = size * sizeof(char) / sizeof(double);
-    std::cout << size << std::endl;
-    std::cout << double_size << std::endl;
     if (double_size != basis_l)
         throw std::runtime_error("Size of the norms file is not consistent with basis. Have you used the correct norms file?");
 

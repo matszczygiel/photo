@@ -2,10 +2,10 @@ COMPUTE_BOUND		[Y,N] //upper or lower case
 COMPUTE_CONTINUUM 	[Y,N] //upper or lower case
 
 ENERGY_I_STATE 		-2.665
-ENERGY_F_STATE		-2.0
+R                   1.4
+PHOTON_EN           21.1
 
 PATH_IN      	    <path>
-FILES_BASIS		    [<name of file>, auto] //text file with names of binary files  
 FILES_1E		    	[<name of file>, auto] //text file with names of binary files
 FILES_2E			    [<name of file>, auto] //text file with names of binary files
 FILES_NORM		    [<name of file>, auto] //text file with names of binary files
@@ -14,13 +14,16 @@ FILE_CI			    [<name of file>, auto]
 FILE_HF_F_VEC
 FILE_HF_F_EN
 
-CONTINUUM_ID        [<name>, auto] //name of continuum shells in the basis file
-
 SELECTION_METHOD	[energy, norm] //upper or lower case
-FORCE_ORTHOGONALITY	[Y,N] //upper or lower case
 GAUGE			    [velocity, dipole] //upper or lower case
 
 WRITE	    		[Y,N] //upper or lower case
 PATH_OUT            <path>
 FILE_OUT		    <name of file>
 
+NUMBER_GTO          74
+NUMBER_PWGTO        10
+MAX_L               2
+NAME                dod1
+K_THETA             0
+K_PHI               0     
