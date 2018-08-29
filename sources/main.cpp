@@ -94,7 +94,6 @@ int main(int argc, char *argv[]) {
     string norms_file = data.first("PATH_IN") + data.first("FILES_NORM") + k_str + data.second("FILES_NORM");
 
     auto norms = reader.load_norms(norms_file);
-    cout << norms;
     auto lmax  = std::stoi(data.first("MAX_L"));
 
     Vector3d kvec;
@@ -132,7 +131,6 @@ int main(int argc, char *argv[]) {
         vec(i) /= norms.tail(vec.size())(i);
 
     VectorXcd cont_vec = vec;
-    cout << cont_vec;
 
     //////////////////////
 

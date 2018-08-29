@@ -72,18 +72,18 @@ void PhotoSCF::run(const Eigen::VectorXcd &vec_ion,
     Hnk = H.topLeftCorner(bnkl, bnkl).real();
     Snk = S.topLeftCorner(bnkl, bnkl).real();
 
-    vecCrs.resize(bnkl + 1);
-    vecCrs << 1.0, VectorXcd::Zero(bnkl);
-    U = MatrixXcd::Zero(bl, bnkl + 1);
-    U.col(0) << VectorXcd::Zero(bnkl), vecC.tail(bkl);
-    U.block(0, 1, bnkl, bnkl) << MatrixXd::Identity(bnkl, bnkl);
+    U                         = MatrixXcd::Zero(bl, bnkl + 1);
+    U.col(0)                  = vecC;
+    U.block(0, 1, bnkl, bnkl) = MatrixXd::Identity(bnkl, bnkl);
+
+    vecCrs    = VectorXcd::Zero(bnkl + 1);
+    vecCrs(0) = 1;
 
     Str = U.adjoint() * S * U;
 
     vecCr = vecCrs;
-    vecC  = U * vecCr;
 
-    vecIrs = vecI.head(bnkl);
+    vecIrs = vec_ion;
     vecIr  = vecIrs;
 
     info = ready;
@@ -139,8 +139,8 @@ void PhotoSCF::free_ints() {
 
 PhotoSCF::status PhotoSCF::one_step() {
     // R matrices preparation
-    auto kRk = Rints.contract(vecC, vecC, 0, 3);
-    auto kkR = Rints.contract(vecC, vecC, 0, 1);
+    auto kRk = Rints.contract(vecC, vecC, 0, 3).topLeftCorner(bnkl, bnkl);
+    auto kkR = Rints.contract(vecC, vecC, 0, 1).topLeftCorner(bnkl, bnkl);
     auto ppR = Rints.contract(vecI, vecI, 0, 1);
     auto pRp = Rints.contract(vecI, vecI, 0, 3);
 
@@ -172,27 +172,28 @@ PhotoSCF::status PhotoSCF::one_step() {
     //A matrices prep
 
     MatrixXcd AmatI =
-        (normC * Hnk) + (H.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl)) +
+        (normC * Hnk) +
+        (H.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl)) +
         (S.topRows(bnkl) * vecC) * (vecC.adjoint() * H.leftCols(bnkl)) +
-        Hkk * Snk + kRk + kkR;
+        (Hkk * Snk) + kRk + kkR;
 
     MatrixXcd AmatC =
         U.adjoint() *
-        (H + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR) *
+        ((normI * H) + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR) *
         U;
 
-    assert(AmatC.rows() == (bnkl + 1));
+    // assert(AmatC.rows() == (bnkl + 1));
 
     cout << " A matrices preparation done.\n\n";
 
     //S matrices prep
 
     MatrixXcd SmatI =
-        normI * Snk + (S.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl));
+        (normC * Snk) + (S.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl));
 
     MatrixXcd SmatC =
         U.adjoint() *
-        (S + (S * vecI) * (vecI.adjoint() * S)) *
+        ((normI * S) + (S * vecI) * (vecI.adjoint() * S)) *
         U;
 
     cout << " S matrices preparation done. \n\n";
@@ -208,12 +209,25 @@ PhotoSCF::status PhotoSCF::one_step() {
         int itC;
         int sizeC = AmatC.cols();
 
+        cout << "vecC\n";
+        cout << vecC;
+        cout << " C eigenvalues:\n";
+        cout << es.eigenvalues();
+        /*
+        for (int i = 0; i < bl; ++i) {
+            cout << "**********\n";
+            cout << es.eigenvalues()[i];
+            cout << "\n";
+            cout << es.eigenvectors().col(i);
+            cout << "\n";
+        }
+*/
         switch (selection) {
             case selection_mth_t::by_energy:
                 temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 temp = temp.cwiseAbs2();
                 temp.minCoeff(&itC);
-                cout << " Iterator to the matching sel_param of C: " << itC
+                cout << " Iterator to the matching energy of C: " << itC
                      << " \n and it's enegry: " << es.eigenvalues()[itC] << "\n\n";
 
                 break;
@@ -226,7 +240,7 @@ PhotoSCF::status PhotoSCF::one_step() {
                         vecCr_dum.tail(sizeC - 1).dot(Str.bottomRightCorner(sizeC - 1, sizeC - 1) * vecCr_dum.tail(sizeC - 1)));
                 }
                 temp.minCoeff(&itC);
-                cout << " Iterator to the matching norm of 1eq: " << itC;
+                cout << " Iterator to the matching norm of C: " << itC;
                 cout << "\n and it's energy: " << es.eigenvalues()[itC] << "\n\n";
                 break;
         }
@@ -238,12 +252,16 @@ PhotoSCF::status PhotoSCF::one_step() {
         VectorXd temp;
         int itI;
 
+        cout << " I eigenvalues:\n";
+        cout << es.eigenvalues();
+        cout << "\n";
+
         switch (selection) {
             case selection_mth_t::by_energy:
                 temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 temp = temp.cwiseAbs2();
                 temp.minCoeff(&itI);
-                cout << " Iterator to the matching Energy of 2eq: " << itI
+                cout << " Iterator to the matching energy of I: " << itI
                      << " \n and it's enegry: " << es.eigenvalues()[itI] << "\n\n";
 
                 break;
@@ -256,7 +274,7 @@ PhotoSCF::status PhotoSCF::one_step() {
                     temp(i) = std::norm(vecIrs.dot(Snk * vecIr_dum));
                 }
                 temp.maxCoeff(&itI);
-                cout << " Iterator to the matching norm of 1eq: " << itI;
+                cout << " Iterator to the matching norm of I: " << itI;
                 cout << "\n and it's energy: " << es.eigenvalues()[itI] << "\n\n";
 
                 break;
