@@ -1,6 +1,8 @@
 #include <cassert>
+#include <future>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
 
 #include "functions.h"
 #include "photo_scf.h"
@@ -139,11 +141,24 @@ void PhotoSCF::free_ints() {
 
 PhotoSCF::status PhotoSCF::one_step() {
     // R matrices preparation
-    auto kRk = Rints.contract(vecC, vecC, 0, 3).topLeftCorner(bnkl, bnkl);
-    auto kkR = Rints.contract(vecC, vecC, 0, 1).topLeftCorner(bnkl, bnkl);
+    auto kRk_future = std::async(std::launch::async, &Tensor_2Ecd::contract, &Rints, vecC, vecC, 0, 3);
+    auto kkR_future = std::async(std::launch::async, &Tensor_2Ecd::contract, &Rints, vecC, vecC, 0, 1);
+    auto ppR_future = std::async(std::launch::async, &Tensor_2Ecd::contract, &Rints, vecI, vecI, 0, 1);
+    auto pRp_future = std::async(std::launch::async, &Tensor_2Ecd::contract, &Rints, vecI, vecI, 0, 3);
+
+    MatrixXcd kRk = kRk_future.get().topLeftCorner(bnkl, bnkl);
+    MatrixXcd kkR = kkR_future.get().topLeftCorner(bnkl, bnkl);
+    MatrixXcd ppR = ppR_future.get();
+    MatrixXcd pRp = pRp_future.get();
+
+    /*
+    auto kRk = Rints.contract(vecC, vecC, 0, 3);
+    kRk      = kRk.topLeftCorner(bnkl, bnkl);
+    auto kkR = Rints.contract(vecC, vecC, 0, 1);
+    kkR      = kkR.topLeftCorner(bnkl, bnkl);
     auto ppR = Rints.contract(vecI, vecI, 0, 1);
     auto pRp = Rints.contract(vecI, vecI, 0, 3);
-
+*/
     // H matrix elements
     auto Hpp = real(scalar_prod(vecI, H, vecI));
     auto Hkk = real(scalar_prod(vecC, H, vecC));
@@ -209,10 +224,8 @@ PhotoSCF::status PhotoSCF::one_step() {
         int itC;
         int sizeC = AmatC.cols();
 
-        cout << "vecC\n";
-        cout << vecC;
         cout << " C eigenvalues:\n";
-        cout << es.eigenvalues();
+        cout << es.eigenvalues() << "\n";
         /*
         for (int i = 0; i < bl; ++i) {
             cout << "**********\n";

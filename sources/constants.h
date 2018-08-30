@@ -5,11 +5,11 @@
 #include <cmath>
 
 namespace Const_arrays {
-constexpr std::size_t belt_s    = 500;
-constexpr std::size_t fact_s    = 15;
-constexpr std::size_t dfact_s   = 15;
-constexpr std::size_t binom_s   = 30;
-constexpr std::size_t omega_s   = 30;
+constexpr int belt_s    = 500;
+constexpr int fact_s    = 15;
+constexpr int dfact_s   = 15;
+constexpr int binom_s   = 30;
+constexpr int omega_s   = 30;
 
 const std::array<int, belt_s> belt = []() {
     std::array<int, belt_s> belt;
