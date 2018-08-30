@@ -30,6 +30,7 @@
 #include "harmonics.h"
 #include "two_electron_integrals.h"
 #include "photo_scf.h"
+#include "functions.h"
 
 using namespace std;
 using namespace Eigen;
@@ -104,7 +105,7 @@ int main(int argc, char *argv[]) {
     kvec(1) = kvals[0] * sin(theta) * sin(phi);
     kvec(2) = kvals[0] * cos(theta);
 
-    VectorXcd cont_vec fetch_coulomb_wf(lmax, kvec, norms);
+    VectorXcd cont_vec = fetch_coulomb_wf(lmax, kvec, norms);
 
     //////////////////////
 

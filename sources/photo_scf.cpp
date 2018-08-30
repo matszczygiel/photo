@@ -78,8 +78,7 @@ void PhotoSCF::run(const Eigen::VectorXcd &vec_ion,
     U.col(0)                  = vecC;
     U.block(0, 1, bnkl, bnkl) = MatrixXd::Identity(bnkl, bnkl);
 
-    vecCrs    = VectorXcd::Zero(bnkl + 1);
-    vecCrs(0) = 1;
+    vecCrs = VectorXcd::Zero(bnkl);
 
     Str = U.adjoint() * S * U;
 
@@ -184,9 +183,7 @@ PhotoSCF::status PhotoSCF::one_step() {
         (Hkk * Snk) + kRk + kkR;
 
     MatrixXcd AmatC =
-        U.adjoint() *
-        ((normI * H) + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR) *
-        U;
+        ((normI * H) + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR);
 
     // assert(AmatC.rows() == (bnkl + 1));
 
@@ -198,9 +195,7 @@ PhotoSCF::status PhotoSCF::one_step() {
         (normC * Snk) + (S.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl));
 
     MatrixXcd SmatC =
-        U.adjoint() *
-        ((normI * S) + (S * vecI) * (vecI.adjoint() * S)) *
-        U;
+        ((normI * S) + (S * vecI) * (vecI.adjoint() * S));
 
     cout << " S matrices preparation done. \n\n";
     cout << " Solving eigenvalue problem. \n\n";
@@ -209,6 +204,12 @@ PhotoSCF::status PhotoSCF::one_step() {
 
     VectorXcd vecIr_dum, vecCr_dum;
 
+    // compise the set Ax = b of overdetermined equations
+    MatrixXcd A = AmatC.leftCols(bnkl) - energy * SmatC.leftCols(bnkl);
+    VectorXcd b = (-AmatC.rightCols(bkl) + energy * SmatC.rightCols(bkl)) * vecC.tail(bkl);
+    vecCr_dum = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
+
+                  /*
     if (evalC) {
         es.compute(AmatC, SmatC);
         VectorXd temp;
@@ -217,15 +218,7 @@ PhotoSCF::status PhotoSCF::one_step() {
 
         cout << " C eigenvalues:\n";
         cout << es.eigenvalues() << "\n";
-        /*
-        for (int i = 0; i < bl; ++i) {
-            cout << "**********\n";
-            cout << es.eigenvalues()[i];
-            cout << "\n";
-            cout << es.eigenvectors().col(i);
-            cout << "\n";
-        }
-*/
+        
         switch (selection) {
             case selection_mth_t::by_energy:
                 temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
@@ -250,9 +243,12 @@ PhotoSCF::status PhotoSCF::one_step() {
         }
         vecCr_dum = es.eigenvectors().col(itC) / es.eigenvectors()(0, itC);
     }
+*/
 
-    if (evalI) {
+                  if (evalI) {
         es.compute(AmatI, SmatI);
+        if(es.info() != Success)
+            cout << "!!!!! eigenslover failure!!!!!\n";
         VectorXd temp;
         int itI;
 
@@ -295,17 +291,17 @@ PhotoSCF::status PhotoSCF::one_step() {
 
     if (evalC) {
         conv_paramC = (vecCr_dum.cwiseAbs() - vecCr.cwiseAbs()).norm();
-        cout << "\n Norm of difference for eq1: " << conv_paramC << "\n";
+        cout << "\n Norm of difference for C: " << conv_paramC << "\n";
         vecCr = vecCr_dum;
     }
     if (evalI) {
         conv_paramI = (vecIr_dum.cwiseAbs() - vecIr.cwiseAbs()).norm();
-        cout << "\n Norm of difference for eq2: " << conv_paramI << "\n";
+        cout << "\n Norm of difference for I: " << conv_paramI << "\n";
         vecIr = vecIr_dum;
     }
 
-    vecC = U * vecCr;
-    vecI << vecIr, VectorXcd::Zero(bl - bnkl);
+    vecC.head(bnkl) = vecCr;
+    vecI << vecIr, VectorXcd::Zero(bkl);
 
     if (!(evalI && evalC))
         return finished;

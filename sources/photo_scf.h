@@ -65,7 +65,7 @@ class PhotoSCF {
     int self_sc_cout   = 0;
     int max_sc_count   = 5;
     int iter_count     = 0;
-    int max_iter_count = 50;
+    int max_iter_count = 10;
     double treshold    = 0.00001;
     status info        = not_started;
 };
