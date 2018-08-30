@@ -22,9 +22,11 @@ double Energy(const double k, const double ionization_pot) {
     return res;
 }
 
-double Sigma(const double k, const double factor, const double ionization_pot) {
-    double sigma = 2 * 1.24183899890039 * factor * photonEeV(k, ionization_pot) * k;
-    return sigma;
+double sigma(const double& photon, const Eigen::Vector3d& polarization, const Eigen::Vector3cd& dipole) {
+    double c        = 137.035999139;
+    double pre_fct  = 4. * M_PI * M_PI * photon / c;
+    double post_fct = std::norm(polarization.dot(dipole));
+    return pre_fct * post_fct;
 }
 
 double photonEeV(const double k, const double ionization_pot) {

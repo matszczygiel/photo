@@ -22,19 +22,21 @@ class PhotoSCF {
         by_norm
     };
 
-    PhotoSCF(const Input_data &data, const std::string & k);
+    PhotoSCF(const Input_data &data, const std::string &k);
 
     void run(const Eigen::VectorXcd &vec_ion,
              const Eigen::VectorXcd &vec_cont);
     status one_step();
     void free_ints();
 
-
     int get_iter_count() const { return iter_count; }
 
     void set_max_iter_count(const int &max_iter_count = 50) { this->max_iter_count = max_iter_count; }
     void set_max_sc_count(const int &max_sc_count = 5) { this->max_sc_count = max_sc_count; }
     void set_treshold(const double &treshold = 0.00001) { this->treshold = treshold; }
+
+    Eigen::VectorXcd getC() const { return vecC; }
+    Eigen::VectorXcd getI() const { return vecI; }
 
    private:
     const Disk_reader reader;

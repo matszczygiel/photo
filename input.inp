@@ -27,3 +27,5 @@ MAX_L               2
 NAME                dod1
 K_THETA             0
 K_PHI               0     
+POL_THETA           0                 
+POL_PHI             0

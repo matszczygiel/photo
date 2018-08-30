@@ -26,11 +26,11 @@
 
 #include "constants.h"
 #include "disk_reader.h"
+#include "functions.h"
 #include "gamess.h"
 #include "harmonics.h"
-#include "two_electron_integrals.h"
 #include "photo_scf.h"
-#include "functions.h"
+#include "two_electron_integrals.h"
 
 using namespace std;
 using namespace Eigen;
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 
     ////////////////////////////
 
-    auto orbitals_ion  = reader.load_HFv(orbs_f);
+    auto orbitals_ion = reader.load_HFv(orbs_f);
     auto energies_ion = reader.load_HFe(enrg_f);
 
     auto en_i = std::stof(data.first("ENERGY_I_STATE"));
@@ -93,6 +93,8 @@ int main(int argc, char *argv[]) {
     std::string k_str = stream.str();
 
     string norms_file = data.first("PATH_IN") + data.first("FILES_NORM") + k_str + data.second("FILES_NORM");
+    string ints_file  = data.first("PATH_IN") + data.first("FILES_1E") + k_str + data.second("FILES_1E");
+    string Rints_file = data.first("PATH_IN") + data.first("FILES_2E") + k_str + data.second("FILES_2E");
 
     auto norms = reader.load_norms(norms_file);
     auto lmax  = std::stoi(data.first("MAX_L"));
@@ -111,43 +113,32 @@ int main(int argc, char *argv[]) {
 
     PhotoSCF sys(data, k_str);
     sys.run(orbitals_ion.col(0), cont_vec);
+    sys.free_ints();
+
+    auto vecI = sys.getI();
+    auto vecC = sys.getC();
 
     //////////////////////////////////
-    /*
-    PhotoSCF photo(controler);
 
-    photo.set energy(en_final);
-
-    photo.path_ints = ;
-    photo.path_Rints = ;
-    photo.path_HFv = ;
-
-    photo.run();
-*/
-    /*
-    iter.iterate();
-
-    iter.free_ints();
-
-    auto vecI = iter.get_vecI();
-    auto vecC = iter.get_vecC();
-
-    int bnkl = reader.get_basis_length_nk();
-    int bl   = reader.get_basis_length();
+    auto bnkl = std::stoi(data.first("NUMBER_GTO"));
+    auto bkl  = std::stoi(data.first("NUMBER_PWGTO"));
 
     auto veci = vecI.head(bnkl);
 
-    auto Dx = reader.load_Dipx();
-    auto Dy = reader.load_Dipy();
-    auto Dz = reader.load_Dipz();
+    auto Dx = reader.load_Dipx(ints_file);
+    auto Dy = reader.load_Dipy(ints_file);
+    auto Dz = reader.load_Dipz(ints_file);
 
-    auto S   = reader.load_S();
+    auto S   = reader.load_S(ints_file);
     auto Snk = S.topLeftCorner(bnkl, bnkl);
-    /// cross section evaluation
 
     auto Dxnk = Dx.topLeftCorner(bnkl, bnkl);
     auto Dynk = Dy.topLeftCorner(bnkl, bnkl);
     auto Dznk = Dz.topLeftCorner(bnkl, bnkl);
+
+    string orbs_i_s = data.first("PATH_IN") + data.first("FILE_HF_I_VEC");
+    auto orbs_i     = reader.load_HFv(orbs_i_s);
+    VectorXd grHF   = orbs_i.col(0);
 
     complex<double> S_kI  = vecC.dot(S.leftCols(bnkl) * grHF);
     complex<double> S_pI  = veci.dot(Snk * grHF);
@@ -158,12 +149,30 @@ int main(int argc, char *argv[]) {
     complex<double> Dy_kI = vecC.dot(Dy.leftCols(bnkl) * grHF);
     complex<double> Dz_kI = vecC.dot(Dz.leftCols(bnkl) * grHF);
 
+
+    Vector3cd T;
+    T(0) = S_kI * Dx_pI + S_pI * Dx_kI;
+    T(1) = S_kI * Dy_pI + S_pI * Dy_kI;
+    T(2) = S_kI * Dz_pI + S_pI * Dz_kI;
+    T *= sqrt(2.);
+
+    cout << " Dipole moment: \n";
+    cout << T << "\n\n";
+
+    double ptheta = std::stof(data.first("POL_THETA"));
+    double pphi   = std::stof(data.first("POL_PHI"));
+
+    Vector3d j;
+    j(0) = sin(ptheta) * cos(pphi);
+    j(1) = sin(ptheta) * sin(pphi);
+    j(2) = cos(ptheta);
+
     double r_pI_sqrt, r_kI_sqrt;
 
     r_pI_sqrt = norm(Dx_pI) + norm(Dy_pI) + norm(Dz_pI);
     r_kI_sqrt = norm(Dx_kI) + norm(Dy_kI) + norm(Dz_kI);
 
-    S_pk = vecI.dot(S * vecC);
+    auto S_pk = vecI.dot(S * vecC);
 
     cout << "\n"
          << " S_pk : " << S_pk << "\n\n";
@@ -180,8 +189,8 @@ int main(int argc, char *argv[]) {
     cout << " \n\n";
 
     double pk_R_pk, pk_R_kp, norm_k_sqrt;
-
-    auto Rints = reader.load_Rints();
+    /*
+    auto Rints = reader.load_Rints(Rints_file);
 
     MatrixXcd pp_R  = Rints.contract(vecI, vecI, 0, 1);
     MatrixXcd p_R_p = Rints.contract(vecI, vecI, 0, 3);
@@ -190,27 +199,37 @@ int main(int argc, char *argv[]) {
 
     pk_R_pk     = real(vecC.dot(pp_R * vecC));
     pk_R_kp     = real(vecC.dot(p_R_p * vecC));
+    */
     norm_k_sqrt = real(vecC.dot(S * vecC));
 
     double norm_psi = 2 * (norm_k_sqrt + norm(S_pk));
-
     cout << " Norm of the whole state: " << norm_psi << "\n\n";
 
-    // energy is of the form: E = E_bound + 0.5 k^2 + E_repulsion_corr
+    //    double E_rep_corr = (pk_R_kp + pk_R_pk) / (0.5 * norm_psi);
 
-    double E_rep_corr = (pk_R_kp + pk_R_pk) / (0.5 * norm_psi);
+    //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
 
-    cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
+    double sig = sigma(photon, j, T);
 
-    double factor = norm(S_kI) * r_pI_sqrt + norm(S_pI) * r_kI_sqrt;
-
-    double sig = Sigma(reader.get_kval(), factor, controler.get_potential());
-
-    cout << " System energy :      " << fixed << setprecision(3) << energy << "\n";
-    cout << " k :                  " << fixed << setprecision(3) << reader.get_kval() << "\n";
-    cout << " Photon energy [eV]:  " << fixed << setprecision(3) << photonEeV(reader.get_kval(), controler.get_potential()) << "\n";
+    cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
     cout << " Cross section :      " << fixed << setprecision(4) << sig << "\n";
     cout << " \n\n\n";
+
+    //write results
+
+    string res_path = data.first("PATH_OUT") + data.first("FILE_OUT");
+
+    std::ofstream outfile(res_path, std::ios_base::app);
+    outfile << data.first("NAME") << "\t";
+    outfile << k_str << "  *  ";
+    outfile << std::fixed << std::setprecision(3) << theta << "\t";
+    outfile << std::fixed << std::setprecision(3) << phi << "\t";
+    outfile << std::fixed << std::setprecision(5) << sig << "  *  ";
+    outfile << std::fixed << std::setprecision(3) << ptheta << "\t";
+    outfile << std::fixed << std::setprecision(3) << pphi << "  *  ";
+    outfile << data.first("PHOTON_EN") << "\t";
+    outfile << std::fixed << std::setprecision(4) << energies_ion(indices.at(0)) << "\n";
+    outfile.close();
 
     // if ( jc.getIfWrite() ) jc.writeRes(sig);
 
