@@ -104,33 +104,7 @@ int main(int argc, char *argv[]) {
     kvec(1) = kvals[0] * sin(theta) * sin(phi);
     kvec(2) = kvals[0] * cos(theta);
 
-    std::vector<std::vector<std::vector<double>>> Dfact(lmax + 1);
-
-    for (int l = 0; l <= lmax; l++)
-        Dfact[l].resize(l + 1);
-    for (int l = 0; l <= lmax; l++)
-        for (int p = 0; p <= l; p++)
-            Dfact[l][p].resize(l - p + 1);
-
-    using std::pow;
-    using std::sqrt;
-
-    for (int l = 0; l <= lmax; l++)
-        for (int p = 0; p <= l; p++)
-            for (int q = 0; q <= l - p; q++) {
-                Dfact[l][p][q] = 0.0;
-                for (int m = -l; m <= l; m++)
-                    Dfact[l][p][q] += Harmonics::NoNormCalcClmR(l, m, p, q, l - p - q) * Harmonics::Y(l, m, kvec);
-                Dfact[l][p][q] *= pow(M_PI, 0.25) * sqrt(Const_arrays::dfact[p] * Const_arrays::dfact[q] * Const_arrays::dfact[l - p - q]) / pow(2.0, 0.25 + l);
-            };
-
-    std::vector<std::complex<double>> vec_cont = Gamess::order_set<std::complex<double>, double>(Dfact);
-
-    Eigen::VectorXcd vec = Eigen::Map<Eigen::VectorXcd>(vec_cont.data(), vec_cont.size());
-    for (int i = 0; i < vec.size(); i++)
-        vec(i) /= norms.tail(vec.size())(i);
-
-    VectorXcd cont_vec = vec;
+    VectorXcd cont_vec fetch_coulomb_wf(lmax, kvec, norms);
 
     //////////////////////
 

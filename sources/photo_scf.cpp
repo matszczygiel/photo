@@ -151,15 +151,6 @@ PhotoSCF::status PhotoSCF::one_step() {
     MatrixXcd ppR = ppR_future.get();
     MatrixXcd pRp = pRp_future.get();
 
-    /*
-    auto kRk = Rints.contract(vecC, vecC, 0, 3);
-    kRk      = kRk.topLeftCorner(bnkl, bnkl);
-    auto kkR = Rints.contract(vecC, vecC, 0, 1);
-    kkR      = kkR.topLeftCorner(bnkl, bnkl);
-    auto ppR = Rints.contract(vecI, vecI, 0, 1);
-    auto pRp = Rints.contract(vecI, vecI, 0, 3);
-*/
-    // H matrix elements
     auto Hpp = real(scalar_prod(vecI, H, vecI));
     auto Hkk = real(scalar_prod(vecC, H, vecC));
     auto Hpk = scalar_prod(vecI, H, vecC);
