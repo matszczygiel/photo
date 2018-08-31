@@ -21,7 +21,7 @@ double Norm(double a, int k, int l, int m);
 
 double energy(const double& k, const double& ionization_pot);
 
-double sigma(const double& photon, const Eigen::Vector3d& polarization,const Eigen::Vector3cd& dipole );
+double dsigma(const double& photon, const Eigen::Vector3d& polarization,const Eigen::Vector3cd& dipole );
 
 double photonEeV(const double k, const double ionization_pot);
 

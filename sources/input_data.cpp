@@ -30,3 +30,11 @@ std::string Input_data::first(const std::string &key) const {
 std::string Input_data::second(const std::string &key) const {
     return keys.at(key).at(1);
 }
+
+std::string Input_data::operator()(const std::string &key, const int &index) const {
+    return keys.at(key).at(index);
+}
+
+int Input_data::size(const std::string &key) const {
+    return keys.at(key).size();
+}

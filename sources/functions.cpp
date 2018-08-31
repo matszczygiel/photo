@@ -22,7 +22,7 @@ double Energy(const double k, const double ionization_pot) {
     return res;
 }
 
-double sigma(const double& photon, const Eigen::Vector3d& polarization, const Eigen::Vector3cd& dipole) {
+double dsigma(const double& photon, const Eigen::Vector3d& polarization, const Eigen::Vector3cd& dipole) {
     double c        = 137.035999139;
     double pre_fct  = 4. * M_PI * M_PI * photon / c;
     double post_fct = std::norm(polarization.dot(dipole));

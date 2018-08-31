@@ -3,7 +3,7 @@ COMPUTE_CONTINUUM 	[Y,N] //upper or lower case
 
 ENERGY_I_STATE 		-2.665
 R                   1.4
-PHOTON_EN           21.1
+PHOTON_EN           52.4
 
 PATH_IN      	    <path>
 FILES_1E		    	[<name of file>, auto] //text file with names of binary files

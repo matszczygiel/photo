@@ -79,7 +79,14 @@ int main(int argc, char *argv[]) {
     }
 
     cout << "K:  ";
-    for (auto &x : kvals)
+    for (auto &x : kvals) {
+        std::stringstream stream;
+        stream << std::fixed << std::setprecision(3) << x;
+        cout << stream.str() << "  ";
+    }
+    cout << "\n";
+    cout << "i:  ";
+    for (auto &x : indices)
         cout << x << "  ";
     cout << "\n";
 
@@ -92,104 +99,124 @@ int main(int argc, char *argv[]) {
     stream << std::fixed << std::setprecision(3) << kvals[0];
     std::string k_str = stream.str();
 
-    string norms_file = data.first("PATH_IN") + data.first("FILES_NORM") + k_str + data.second("FILES_NORM");
-    string ints_file  = data.first("PATH_IN") + data.first("FILES_1E") + k_str + data.second("FILES_1E");
-    string Rints_file = data.first("PATH_IN") + data.first("FILES_2E") + k_str + data.second("FILES_2E");
-
-    auto norms = reader.load_norms(norms_file);
-    auto lmax  = std::stoi(data.first("MAX_L"));
-
-    Vector3d kvec;
-    double theta = std::stof(data.first("K_THETA"));
-    double phi   = std::stof(data.first("K_PHI"));
-
-    kvec(0) = kvals[0] * sin(theta) * cos(phi);
-    kvec(1) = kvals[0] * sin(theta) * sin(phi);
-    kvec(2) = kvals[0] * cos(theta);
-
-    VectorXcd cont_vec = fetch_coulomb_wf(lmax, kvec, norms);
-
-    //////////////////////
-
-    PhotoSCF sys(data, k_str);
-    sys.run(orbitals_ion.col(0), cont_vec);
-    sys.free_ints();
-
-    auto vecI = sys.getI();
-    auto vecC = sys.getC();
-
-    //////////////////////////////////
-
-    auto bnkl = std::stoi(data.first("NUMBER_GTO"));
-    auto bkl  = std::stoi(data.first("NUMBER_PWGTO"));
-
-    auto veci = vecI.head(bnkl);
-
-    auto Dx = reader.load_Dipx(ints_file);
-    auto Dy = reader.load_Dipy(ints_file);
-    auto Dz = reader.load_Dipz(ints_file);
-
-    auto S   = reader.load_S(ints_file);
-    auto Snk = S.topLeftCorner(bnkl, bnkl);
-
-    auto Dxnk = Dx.topLeftCorner(bnkl, bnkl);
-    auto Dynk = Dy.topLeftCorner(bnkl, bnkl);
-    auto Dznk = Dz.topLeftCorner(bnkl, bnkl);
-
-    string orbs_i_s = data.first("PATH_IN") + data.first("FILE_HF_I_VEC");
-    auto orbs_i     = reader.load_HFv(orbs_i_s);
-    VectorXd grHF   = orbs_i.col(0);
-
-    complex<double> S_kI  = vecC.dot(S.leftCols(bnkl) * grHF);
-    complex<double> S_pI  = veci.dot(Snk * grHF);
-    complex<double> Dx_pI = veci.dot(Dxnk * grHF);
-    complex<double> Dy_pI = veci.dot(Dynk * grHF);
-    complex<double> Dz_pI = veci.dot(Dznk * grHF);
-    complex<double> Dx_kI = vecC.dot(Dx.leftCols(bnkl) * grHF);
-    complex<double> Dy_kI = vecC.dot(Dy.leftCols(bnkl) * grHF);
-    complex<double> Dz_kI = vecC.dot(Dz.leftCols(bnkl) * grHF);
-
-
-    Vector3cd T;
-    T(0) = S_kI * Dx_pI + S_pI * Dx_kI;
-    T(1) = S_kI * Dy_pI + S_pI * Dy_kI;
-    T(2) = S_kI * Dz_pI + S_pI * Dz_kI;
-    T *= sqrt(2.);
-
-    cout << " Dipole moment: \n";
-    cout << T << "\n\n";
+    auto lmax = std::stoi(data.first("MAX_L"));
 
     double ptheta = std::stof(data.first("POL_THETA"));
     double pphi   = std::stof(data.first("POL_PHI"));
+    /////////////
+    vector<string> norm_files, ints_files, Rints_files;
+    vector<double> theta;
 
-    Vector3d j;
-    j(0) = sin(ptheta) * cos(pphi);
-    j(1) = sin(ptheta) * sin(pphi);
-    j(2) = cos(ptheta);
+    int job_size = data.size("FILES_NORM") - 1;
 
-    double r_pI_sqrt, r_kI_sqrt;
+    for (int i = 0; i < job_size; ++i) {
+        norm_files.push_back(data.first("PATH_IN") + data.first("FILES_NORM") + k_str + data("FILES_NORM", i + 1));
+        ints_files.push_back(data.first("PATH_IN") + data.first("FILES_1E") + k_str + data("FILES_1E", i + 1));
+        Rints_files.push_back(data.first("PATH_IN") + data.first("FILES_2E") + k_str + data("FILES_2E", i + 1));
 
-    r_pI_sqrt = norm(Dx_pI) + norm(Dy_pI) + norm(Dz_pI);
-    r_kI_sqrt = norm(Dx_kI) + norm(Dy_kI) + norm(Dz_kI);
+        theta.push_back(std::stof(data("K_THETA", i)));
+    }
 
-    auto S_pk = vecI.dot(S * vecC);
+    Vector3d kvec;
+    double phi = std::stof(data.first("K_PHI"));
+    vector<double> sigma(job_size);
 
-    cout << "\n"
-         << " S_pk : " << S_pk << "\n\n";
+    for (int i = 0; i < job_size; ++i) {
+        kvec(0) = kvals[0] * sin(theta.at(i)) * cos(phi);
+        kvec(1) = kvals[0] * sin(theta.at(i)) * sin(phi);
+        kvec(2) = kvals[0] * cos(theta.at(i));
 
-    cout << " Dx_kI:     " << Dx_kI << "\n";
-    cout << " Dy_kI:     " << Dy_kI << "\n";
-    cout << " Dz_kI:     " << Dz_kI << "\n";
-    cout << " \n\n";
+        auto norms = reader.load_norms(norm_files.at(i));
 
-    cout << " S_kI:      " << S_kI << "\n";
-    cout << " S_pI:      " << S_pI << "\n";
-    cout << " r_pI_sqrt: " << r_pI_sqrt << "\n";
-    cout << " r_kI_sqrt: " << r_kI_sqrt << "\n";
-    cout << " \n\n";
+        VectorXcd cont_vec = fetch_coulomb_wf(lmax, kvec, norms);
 
-    double pk_R_pk, pk_R_kp, norm_k_sqrt;
-    /*
+        //////////////////////
+        /*
+        PhotoSCF sys(data, k_str);
+        sys.run(orbitals_ion.col(0), cont_vec);
+        sys.free_ints();
+
+        auto vecI = sys.getI();
+        auto vecC = sys.getC();
+        
+*/
+
+        auto bnkl = std::stoi(data.first("NUMBER_GTO"));
+        auto bkl  = std::stoi(data.first("NUMBER_PWGTO"));
+        auto bl   = bnkl + bkl;
+
+        VectorXcd vecI, vecC;
+        vecI = VectorXcd::Zero(bl);
+        vecC = VectorXcd::Zero(bl);
+
+        vecI.head(bnkl) = orbitals_ion.col(0);
+        vecC.tail(bkl)  = cont_vec;
+
+        //////////////////////////////////
+
+        auto veci = vecI.head(bnkl);
+
+        auto Dx = reader.load_Dipx(ints_files.at(i));
+        auto Dy = reader.load_Dipy(ints_files.at(i));
+        auto Dz = reader.load_Dipz(ints_files.at(i));
+
+        auto S   = reader.load_S(ints_files.at(i));
+        auto Snk = S.topLeftCorner(bnkl, bnkl);
+
+        auto Dxnk = Dx.topLeftCorner(bnkl, bnkl);
+        auto Dynk = Dy.topLeftCorner(bnkl, bnkl);
+        auto Dznk = Dz.topLeftCorner(bnkl, bnkl);
+
+        string orbs_i_s = data.first("PATH_IN") + data.first("FILE_HF_I_VEC");
+        auto orbs_i     = reader.load_HFv(orbs_i_s);
+        VectorXd grHF   = orbs_i.col(0);
+
+        complex<double> S_kI  = vecC.dot(S.leftCols(bnkl) * grHF);
+        complex<double> S_pI  = veci.dot(Snk * grHF);
+        complex<double> Dx_pI = veci.dot(Dxnk * grHF);
+        complex<double> Dy_pI = veci.dot(Dynk * grHF);
+        complex<double> Dz_pI = veci.dot(Dznk * grHF);
+        complex<double> Dx_kI = vecC.dot(Dx.leftCols(bnkl) * grHF);
+        complex<double> Dy_kI = vecC.dot(Dy.leftCols(bnkl) * grHF);
+        complex<double> Dz_kI = vecC.dot(Dz.leftCols(bnkl) * grHF);
+
+        Vector3cd T;
+        T(0) = S_kI * Dx_pI + S_pI * Dx_kI;
+        T(1) = S_kI * Dy_pI + S_pI * Dy_kI;
+        T(2) = S_kI * Dz_pI + S_pI * Dz_kI;
+        T *= sqrt(2.);
+
+        cout << " Dipole moment: \n";
+        cout << T << "\n\n";
+
+        Vector3d j;
+        j(0) = sin(ptheta) * cos(pphi);
+        j(1) = sin(ptheta) * sin(pphi);
+        j(2) = cos(ptheta);
+
+        double r_pI_sqrt, r_kI_sqrt;
+
+        r_pI_sqrt = norm(Dx_pI) + norm(Dy_pI) + norm(Dz_pI);
+        r_kI_sqrt = norm(Dx_kI) + norm(Dy_kI) + norm(Dz_kI);
+
+        auto S_pk = vecI.dot(S * vecC);
+
+        cout << "\n"
+             << " S_pk : " << S_pk << "\n\n";
+
+        cout << " Dx_kI:     " << Dx_kI << "\n";
+        cout << " Dy_kI:     " << Dy_kI << "\n";
+        cout << " Dz_kI:     " << Dz_kI << "\n";
+        cout << " \n\n";
+
+        cout << " S_kI:      " << S_kI << "\n";
+        cout << " S_pI:      " << S_pI << "\n";
+        cout << " r_pI_sqrt: " << r_pI_sqrt << "\n";
+        cout << " r_kI_sqrt: " << r_kI_sqrt << "\n";
+        cout << " \n\n";
+
+        double pk_R_pk, pk_R_kp, norm_k_sqrt;
+        /*
     auto Rints = reader.load_Rints(Rints_file);
 
     MatrixXcd pp_R  = Rints.contract(vecI, vecI, 0, 1);
@@ -200,36 +227,55 @@ int main(int argc, char *argv[]) {
     pk_R_pk     = real(vecC.dot(pp_R * vecC));
     pk_R_kp     = real(vecC.dot(p_R_p * vecC));
     */
-    norm_k_sqrt = real(vecC.dot(S * vecC));
+        norm_k_sqrt = real(vecC.dot(S * vecC));
 
-    double norm_psi = 2 * (norm_k_sqrt + norm(S_pk));
-    cout << " Norm of the whole state: " << norm_psi << "\n\n";
+        double norm_psi = 2 * (norm_k_sqrt + norm(S_pk));
+        cout << " Norm of the whole state: " << norm_psi << "\n\n";
 
-    //    double E_rep_corr = (pk_R_kp + pk_R_pk) / (0.5 * norm_psi);
+        //    double E_rep_corr = (pk_R_kp + pk_R_pk) / (0.5 * norm_psi);
 
-    //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
+        //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
 
-    double sig = sigma(photon, j, T);
+        sigma.at(i) = dsigma(photon, j, T);
 
-    cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
-    cout << " Cross section :      " << fixed << setprecision(4) << sig << "\n";
-    cout << " \n\n\n";
+        cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
+        cout << " Cross section :      " << fixed << setprecision(4) << sigma.at(i) << "\n";
+        cout << " \n\n\n";
+    }
 
     //write results
 
-    string res_path = data.first("PATH_OUT") + data.first("FILE_OUT");
+    bool write;
+    char token;
+    std::string arg = "WRITE";
 
-    std::ofstream outfile(res_path, std::ios_base::app);
-    outfile << data.first("NAME") << "\t";
-    outfile << k_str << "  *  ";
-    outfile << std::fixed << std::setprecision(3) << theta << "\t";
-    outfile << std::fixed << std::setprecision(3) << phi << "\t";
-    outfile << std::fixed << std::setprecision(5) << sig << "  *  ";
-    outfile << std::fixed << std::setprecision(3) << ptheta << "\t";
-    outfile << std::fixed << std::setprecision(3) << pphi << "  *  ";
-    outfile << data.first("PHOTON_EN") << "\t";
-    outfile << std::fixed << std::setprecision(4) << energies_ion(indices.at(0)) << "\n";
-    outfile.close();
+    token = std::tolower(*data.first(arg).begin());
+    if (token == 'y')
+        write = true;
+    else if (token == 'n')
+        write = false;
+    else
+        throw std::runtime_error("Invalid argument for" + arg + ".");
+
+    if (write) {
+        string res_path = data.first("PATH_OUT") + data.first("FILE_OUT");
+
+        std::ofstream outfile(res_path, std::ios_base::app);
+        outfile << std::fixed;
+        outfile << "****** " << data.first("NAME") << " ******\n";
+        outfile << "Photon [eV]         " << data.first("PHOTON_EN") << "\n";
+        outfile << "Ion el E [au]       " << std::setprecision(4) << energies_ion(indices.at(0)) << "\n";
+        outfile << "k (k, phi)          " << k_str << "\t" << std::setprecision(3) << phi << "\n";
+        outfile << "j (theta, phi)      " << std::setprecision(3) << ptheta << "\t" << std::setprecision(3) << pphi << "\n";
+        outfile << "========\n";
+        outfile << "k(theta)\tsigma\n";
+        for (int i = 0; i < job_size; ++i) {
+            outfile << std::setprecision(3) << theta.at(i) << "\t\t";
+            outfile << std::setprecision(5) << sigma.at(i) << "\n";
+        }
+        outfile << "\n";
+        outfile.close();
+    }
 
     // if ( jc.getIfWrite() ) jc.writeRes(sig);
 
