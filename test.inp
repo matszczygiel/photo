@@ -3,7 +3,7 @@ COMPUTE_CONTINUUM 	N
 
 ENERGY_I_STATE 		-1.1737061600
 R                   1.4
-PHOTON_EN           52.4
+PHOTON_EN           21.1
 
 PATH_IN      	    /home/mateusz/Documents/cpp/photo/data/h2/dod1/
 FILES_1E		    file1E_h2_k      _t0_R0.F  _t1_R0.F  _t2_R0.F  _t3_R0.F  _t4_R0.F  _t5_R0.F  _t6_R0.F  _t7_R0.F  _t8_R0.F  _t9_R0.F
@@ -17,7 +17,7 @@ FILE_HF_F_EN        h2p_R0_e.dat
 SELECTION_METHOD	energy
 GAUGE			    dipole
 
-WRITE	    		N
+WRITE	    		Y
 PATH_OUT            /home/mateusz/Documents/cpp/photo/data/h2/dod1/
 FILE_OUT		    res.dat
 

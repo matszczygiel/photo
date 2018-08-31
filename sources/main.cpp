@@ -38,13 +38,17 @@ using namespace Eigen;
 int main(int argc, char *argv[]) {
     auto start = chrono::system_clock::now();
     /*
-    if (argc < 2) {
+    if (argc < 3) {
         cout << " Proper usage: ./rec <input name> <settings>\n";
         return EXIT_SUCCESS;
     }
 */
     //string input = argv[1];
     string input = "/home/mateusz/workspace/photo/test.inp";
+    string setting = "n";
+    if (argc > 1)
+        setting = argv[1];
+
     ifstream ifile(input);
     const Input_data data(ifile);
     ifile.close();
@@ -85,15 +89,11 @@ int main(int argc, char *argv[]) {
         cout << stream.str() << "  ";
     }
     cout << "\n";
-    cout << "i:  ";
-    for (auto &x : indices)
-        cout << x << "  ";
-    cout << "\n";
+
+    if (setting == "-dump")
+        return 0;
 
     ///////////////////////////////
-
-    if (kvals.size() != 1)
-        return 0;
 
     std::stringstream stream;
     stream << std::fixed << std::setprecision(3) << kvals[0];
@@ -117,21 +117,22 @@ int main(int argc, char *argv[]) {
         theta.push_back(std::stof(data("K_THETA", i)));
     }
 
-    Vector3d kvec;
     double phi = std::stof(data.first("K_PHI"));
-    vector<double> sigma(job_size);
+    vector<vector<double>> sigma(job_size, vector<double>(kvals.size(), 0.));
 
-    for (int i = 0; i < job_size; ++i) {
-        kvec(0) = kvals[0] * sin(theta.at(i)) * cos(phi);
-        kvec(1) = kvals[0] * sin(theta.at(i)) * sin(phi);
-        kvec(2) = kvals[0] * cos(theta.at(i));
+    for (int k = 0; k < kvals.size(); ++k) {
+        for (int i = 0; i < job_size; ++i) {
+            Vector3d kvec;
+            kvec(0) = kvals[k] * sin(theta.at(i)) * cos(phi);
+            kvec(1) = kvals[k] * sin(theta.at(i)) * sin(phi);
+            kvec(2) = kvals[k] * cos(theta.at(i));
 
-        auto norms = reader.load_norms(norm_files.at(i));
+            auto norms = reader.load_norms(norm_files.at(i));
 
-        VectorXcd cont_vec = fetch_coulomb_wf(lmax, kvec, norms);
+            VectorXcd cont_vec = fetch_coulomb_wf(lmax, kvec, norms);
 
-        //////////////////////
-        /*
+            //////////////////////
+            /*
         PhotoSCF sys(data, k_str);
         sys.run(orbitals_ion.col(0), cont_vec);
         sys.free_ints();
@@ -141,82 +142,82 @@ int main(int argc, char *argv[]) {
         
 */
 
-        auto bnkl = std::stoi(data.first("NUMBER_GTO"));
-        auto bkl  = std::stoi(data.first("NUMBER_PWGTO"));
-        auto bl   = bnkl + bkl;
+            auto bnkl = std::stoi(data.first("NUMBER_GTO"));
+            auto bkl  = std::stoi(data.first("NUMBER_PWGTO"));
+            auto bl   = bnkl + bkl;
 
-        VectorXcd vecI, vecC;
-        vecI = VectorXcd::Zero(bl);
-        vecC = VectorXcd::Zero(bl);
+            VectorXcd vecI, vecC;
+            vecI = VectorXcd::Zero(bl);
+            vecC = VectorXcd::Zero(bl);
 
-        vecI.head(bnkl) = orbitals_ion.col(0);
-        vecC.tail(bkl)  = cont_vec;
+            vecI.head(bnkl) = orbitals_ion.col(indices[k]);
+            vecC.tail(bkl)  = cont_vec;
 
-        //////////////////////////////////
+            //////////////////////////////////
 
-        auto veci = vecI.head(bnkl);
+            auto veci = vecI.head(bnkl);
 
-        auto Dx = reader.load_Dipx(ints_files.at(i));
-        auto Dy = reader.load_Dipy(ints_files.at(i));
-        auto Dz = reader.load_Dipz(ints_files.at(i));
+            auto Dx = reader.load_Dipx(ints_files.at(i));
+            auto Dy = reader.load_Dipy(ints_files.at(i));
+            auto Dz = reader.load_Dipz(ints_files.at(i));
 
-        auto S   = reader.load_S(ints_files.at(i));
-        auto Snk = S.topLeftCorner(bnkl, bnkl);
+            auto S   = reader.load_S(ints_files.at(i));
+            auto Snk = S.topLeftCorner(bnkl, bnkl);
 
-        auto Dxnk = Dx.topLeftCorner(bnkl, bnkl);
-        auto Dynk = Dy.topLeftCorner(bnkl, bnkl);
-        auto Dznk = Dz.topLeftCorner(bnkl, bnkl);
+            auto Dxnk = Dx.topLeftCorner(bnkl, bnkl);
+            auto Dynk = Dy.topLeftCorner(bnkl, bnkl);
+            auto Dznk = Dz.topLeftCorner(bnkl, bnkl);
 
-        string orbs_i_s = data.first("PATH_IN") + data.first("FILE_HF_I_VEC");
-        auto orbs_i     = reader.load_HFv(orbs_i_s);
-        VectorXd grHF   = orbs_i.col(0);
+            string orbs_i_s = data.first("PATH_IN") + data.first("FILE_HF_I_VEC");
+            auto orbs_i     = reader.load_HFv(orbs_i_s);
+            VectorXd grHF   = orbs_i.col(0);
 
-        complex<double> S_kI  = vecC.dot(S.leftCols(bnkl) * grHF);
-        complex<double> S_pI  = veci.dot(Snk * grHF);
-        complex<double> Dx_pI = veci.dot(Dxnk * grHF);
-        complex<double> Dy_pI = veci.dot(Dynk * grHF);
-        complex<double> Dz_pI = veci.dot(Dznk * grHF);
-        complex<double> Dx_kI = vecC.dot(Dx.leftCols(bnkl) * grHF);
-        complex<double> Dy_kI = vecC.dot(Dy.leftCols(bnkl) * grHF);
-        complex<double> Dz_kI = vecC.dot(Dz.leftCols(bnkl) * grHF);
+            complex<double> S_kI  = vecC.dot(S.leftCols(bnkl) * grHF);
+            complex<double> S_pI  = veci.dot(Snk * grHF);
+            complex<double> Dx_pI = veci.dot(Dxnk * grHF);
+            complex<double> Dy_pI = veci.dot(Dynk * grHF);
+            complex<double> Dz_pI = veci.dot(Dznk * grHF);
+            complex<double> Dx_kI = vecC.dot(Dx.leftCols(bnkl) * grHF);
+            complex<double> Dy_kI = vecC.dot(Dy.leftCols(bnkl) * grHF);
+            complex<double> Dz_kI = vecC.dot(Dz.leftCols(bnkl) * grHF);
 
-        Vector3cd T;
-        T(0) = S_kI * Dx_pI + S_pI * Dx_kI;
-        T(1) = S_kI * Dy_pI + S_pI * Dy_kI;
-        T(2) = S_kI * Dz_pI + S_pI * Dz_kI;
-        T *= sqrt(2.);
+            Vector3cd T;
+            T(0) = S_kI * Dx_pI + S_pI * Dx_kI;
+            T(1) = S_kI * Dy_pI + S_pI * Dy_kI;
+            T(2) = S_kI * Dz_pI + S_pI * Dz_kI;
+            T *= sqrt(2.);
 
-        cout << " Dipole moment: \n";
-        cout << T << "\n\n";
+            cout << " Dipole moment: \n";
+            cout << T << "\n\n";
 
-        Vector3d j;
-        j(0) = sin(ptheta) * cos(pphi);
-        j(1) = sin(ptheta) * sin(pphi);
-        j(2) = cos(ptheta);
+            Vector3d j;
+            j(0) = sin(ptheta) * cos(pphi);
+            j(1) = sin(ptheta) * sin(pphi);
+            j(2) = cos(ptheta);
 
-        double r_pI_sqrt, r_kI_sqrt;
+            double r_pI_sqrt, r_kI_sqrt;
 
-        r_pI_sqrt = norm(Dx_pI) + norm(Dy_pI) + norm(Dz_pI);
-        r_kI_sqrt = norm(Dx_kI) + norm(Dy_kI) + norm(Dz_kI);
+            r_pI_sqrt = norm(Dx_pI) + norm(Dy_pI) + norm(Dz_pI);
+            r_kI_sqrt = norm(Dx_kI) + norm(Dy_kI) + norm(Dz_kI);
 
-        auto S_pk = vecI.dot(S * vecC);
+            auto S_pk = vecI.dot(S * vecC);
 
-        cout << "\n"
-             << " S_pk : " << S_pk << "\n\n";
+            cout << "\n"
+                 << " S_pk : " << S_pk << "\n\n";
 
-        cout << " Dx_kI:     " << Dx_kI << "\n";
-        cout << " Dy_kI:     " << Dy_kI << "\n";
-        cout << " Dz_kI:     " << Dz_kI << "\n";
-        cout << " \n\n";
+            cout << " Dx_kI:     " << Dx_kI << "\n";
+            cout << " Dy_kI:     " << Dy_kI << "\n";
+            cout << " Dz_kI:     " << Dz_kI << "\n";
+            cout << " \n\n";
 
-        cout << " S_kI:      " << S_kI << "\n";
-        cout << " S_pI:      " << S_pI << "\n";
-        cout << " r_pI_sqrt: " << r_pI_sqrt << "\n";
-        cout << " r_kI_sqrt: " << r_kI_sqrt << "\n";
-        cout << " \n\n";
+            cout << " S_kI:      " << S_kI << "\n";
+            cout << " S_pI:      " << S_pI << "\n";
+            cout << " r_pI_sqrt: " << r_pI_sqrt << "\n";
+            cout << " r_kI_sqrt: " << r_kI_sqrt << "\n";
+            cout << " \n\n";
 
-        double pk_R_pk, pk_R_kp, norm_k_sqrt;
-        /*
+            double pk_R_pk, pk_R_kp, norm_k_sqrt;
+            /*
     auto Rints = reader.load_Rints(Rints_file);
 
     MatrixXcd pp_R  = Rints.contract(vecI, vecI, 0, 1);
@@ -227,20 +228,22 @@ int main(int argc, char *argv[]) {
     pk_R_pk     = real(vecC.dot(pp_R * vecC));
     pk_R_kp     = real(vecC.dot(p_R_p * vecC));
     */
-        norm_k_sqrt = real(vecC.dot(S * vecC));
+            norm_k_sqrt = real(vecC.dot(S * vecC));
 
-        double norm_psi = 2 * (norm_k_sqrt + norm(S_pk));
-        cout << " Norm of the whole state: " << norm_psi << "\n\n";
+            double norm_psi = 2 * (norm_k_sqrt + norm(S_pk));
+            cout << " Norm of the whole state: " << norm_psi << "\n\n";
 
-        //    double E_rep_corr = (pk_R_kp + pk_R_pk) / (0.5 * norm_psi);
+            //    double E_rep_corr = (pk_R_kp + pk_R_pk) / (0.5 * norm_psi);
 
-        //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
+            //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
 
-        sigma.at(i) = dsigma(photon, j, T);
+            sigma.at(i).at(k) += dsigma(photon, j, T);
 
-        cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
-        cout << " Cross section :      " << fixed << setprecision(4) << sigma.at(i) << "\n";
-        cout << " \n\n\n";
+            cout << " To state:            " << fixed << indices[k] << "\n";
+            cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
+            cout << " Cross section :      " << fixed << setprecision(4) << sigma.at(i).at(k) << "\n";
+            cout << " \n\n\n";
+        }
     }
 
     //write results
@@ -264,14 +267,21 @@ int main(int argc, char *argv[]) {
         outfile << std::fixed;
         outfile << "****** " << data.first("NAME") << " ******\n";
         outfile << "Photon [eV]         " << data.first("PHOTON_EN") << "\n";
-        outfile << "Ion el E [au]       " << std::setprecision(4) << energies_ion(indices.at(0)) << "\n";
-        outfile << "k (k, phi)          " << k_str << "\t" << std::setprecision(3) << phi << "\n";
+        outfile << "k ( phi)            " << std::setprecision(3) << phi << "\n";
         outfile << "j (theta, phi)      " << std::setprecision(3) << ptheta << "\t" << std::setprecision(3) << pphi << "\n";
         outfile << "========\n";
-        outfile << "k(theta)\tsigma\n";
+        outfile << "k(theta)";
+        for (const auto &x : indices)
+            outfile << "\t" << x << "\t";
+        outfile << "\ttot sigma\n";
         for (int i = 0; i < job_size; ++i) {
+            double sig_tot = 0;
             outfile << std::setprecision(3) << theta.at(i) << "\t\t";
-            outfile << std::setprecision(5) << sigma.at(i) << "\n";
+            for (const auto &x : sigma.at(i)) {
+                outfile << std::setprecision(5) << x << "\t\t";
+                sig_tot += x;
+            }
+            outfile << std::setprecision(5) << sig_tot << "\n";
         }
         outfile << "\n";
         outfile.close();
