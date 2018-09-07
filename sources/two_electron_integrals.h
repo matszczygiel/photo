@@ -6,6 +6,7 @@
 #include <cassert>
 #include <complex>
 #include <iostream>
+#include <type_traits>
 #include <utility>
 
 #include <eigen3/Eigen/Dense>
@@ -52,7 +53,10 @@ class Tensor_2E {
         }
         delete[] pos_cubes;
         delete[] neg_cubes;
-        size = 0;
+
+        pos_cubes = nullptr;
+        neg_cubes = nullptr;
+        size      = 0;
     }
 
     void resize(const int& s) {
@@ -167,11 +171,11 @@ class Tensor_2E {
     inline std::complex<T> coef(const index& i,
                                 const index& j,
                                 const index& k,
-                                const index& l) const {
+                                const index& l) const noexcept {
         assert(i < size && j < size && k < size && l < size);
-        auto unq_perm      = get_unq_combination(i, j, k, l);
-        conjugation_flag f = std::get<1>(unq_perm);
-        index_array a      = std::get<0>(unq_perm);
+        const auto unq_perm       = get_unq_combination(i, j, k, l);
+        const conjugation_flag& f = std::get<1>(unq_perm);
+        const index_array& a      = std::get<0>(unq_perm);
         if (a[0] < a[3]) {
             auto val = neg_cubes[a[3]][a[0]][a[1]][a[2]];
             return f ? conj(val) : val;
@@ -185,11 +189,11 @@ class Tensor_2E {
                        const index& j,
                        const index& k,
                        const index& l,
-                       const std::complex<T>& val) {
+                       const std::complex<T>& val) noexcept {
         assert(i < size && j < size && k < size && l < size);
-        auto unq_perm      = get_unq_combination(i, j, k, l);
-        conjugation_flag f = std::get<1>(unq_perm);
-        index_array a      = std::get<0>(unq_perm);
+        const auto unq_perm       = get_unq_combination(i, j, k, l);
+        const index_array& a      = std::get<0>(unq_perm);
+        const conjugation_flag& f = std::get<1>(unq_perm);
         assert((a[0] < a[3] && a[1] < a[3] && a[2] < a[3]) ||
                (a[0] >= a[3] && a[1] >= a[3] && a[2] >= a[3]));
         if (a[0] < a[3])
@@ -198,60 +202,83 @@ class Tensor_2E {
             pos_cubes[a[3]][a[0] - a[3]][a[1] - a[3]][a[2] - a[3]] = f ? conj(val) : val;
     }
 
-    inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> contract(
+    template <int i1, int i2, typename std::enable_if<i1 == 0 && i2 == 1>::type* = nullptr>
+    inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
+    contract(
         const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2,
-        const index& i1,
-        const index& i2) {
+        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
         assert(vec1.size() == size && vec2.size() == size);
-        assert(i1 == 0 || i1 == 2);
-        assert(i2 == 1 || i2 == 3);
 
         Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
         res.setZero();
 
-        switch (i1) {
-            case 0:
-                switch (i2) {
-                    case 1:
-                        for (int i = 0; i < size; i++)
-                            for (int j = 0; j < size; j++)
-                                for (int k = 0; k < size; k++)
-                                    for (int l = 0; l < size; l++)
-                                        res(i, j) += conj(vec1(k)) * coef(k, l, i, j) * vec2(l);
-                        break;
-                    case 3:
-                        for (int i = 0; i < size; i++)
-                            for (int j = 0; j < size; j++)
-                                for (int k = 0; k < size; k++)
-                                    for (int l = 0; l < size; l++)
-                                        res(i, j) += conj(vec1(k)) * coef(k, j, i, l) * vec2(l);
-                        break;
-                }
-                break;
-            case 2:
-                switch (i2) {
-                    case 1:
-                        for (int i = 0; i < size; i++)
-                            for (int j = 0; j < size; j++)
-                                for (int k = 0; k < size; k++)
-                                    for (int l = 0; l < size; l++)
-                                        res(i, j) += conj(vec1(k)) * coef(i, l, k, j) * vec2(l);
-                        break;
-                    case 3:
-                        for (int i = 0; i < size; i++)
-                            for (int j = 0; j < size; j++)
-                                for (int k = 0; k < size; k++)
-                                    for (int l = 0; l < size; l++)
-                                        res(i, j) += conj(vec1(k)) * coef(i, j, k, l) * vec2(l);
-                        break;
-                }
-                break;
-        }
-        return res;
+        for (int i = 0; i < size; i++)
+            for (int j = 0; j < size; j++)
+                for (int k = 0; k < size; k++)
+                    for (int l = 0; l < size; l++)
+                        res(i, j) += conj(vec1(k)) * coef(k, l, i, j) * vec2(l);
+
+        return std::move(res);
     }
 
-    void print(std::ostream& os) {
+    template <int i1, int i2, typename std::enable_if<i1 == 0 && i2 == 3>::type* = nullptr>
+    inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
+    contract(
+        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
+        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
+        assert(vec1.size() == size && vec2.size() == size);
+
+        Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
+        res.setZero();
+
+        for (int i = 0; i < size; i++)
+            for (int j = 0; j < size; j++)
+                for (int k = 0; k < size; k++)
+                    for (int l = 0; l < size; l++)
+                        res(i, j) += conj(vec1(k)) * coef(k, j, i, l) * vec2(l);
+
+        return std::move(res);
+    }
+
+    template <int i1, int i2, typename std::enable_if<i1 == 2 && i2 == 1>::type* = nullptr>
+    inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
+    contract(
+        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
+        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
+        assert(vec1.size() == size && vec2.size() == size);
+
+        Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
+        res.setZero();
+
+        for (int i = 0; i < size; i++)
+            for (int j = 0; j < size; j++)
+                for (int k = 0; k < size; k++)
+                    for (int l = 0; l < size; l++)
+                        res(i, j) += conj(vec1(k)) * coef(i, l, k, j) * vec2(l);
+
+        return std::move(res);
+    }
+
+    template <int i1, int i2, typename std::enable_if<i1 == 2 && i2 == 3>::type* = nullptr>
+    inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
+    contract(
+        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
+        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
+        assert(vec1.size() == size && vec2.size() == size);
+
+        Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
+        res.setZero();
+
+        for (int i = 0; i < size; i++)
+            for (int j = 0; j < size; j++)
+                for (int k = 0; k < size; k++)
+                    for (int l = 0; l < size; l++)
+                        res(i, j) += conj(vec1(k)) * coef(i, j, k, l) * vec2(l);
+
+        return std::move(res);
+    }
+
+    void print(std::ostream& os) const noexcept {
         for (int i = 0; i < size; ++i)
             for (int j = 0; j < size; ++j)
                 for (int k = 0; k < size; ++k)
@@ -266,7 +293,7 @@ class Tensor_2E {
     bool is_unique_combination(const index& i,
                                const index& j,
                                const index& k,
-                               const index& l) const {
+                               const index& l) const noexcept {
         if (i >= l && j >= l && k >= l)
             return true;
         else if (i < l && j < l && k < l)
@@ -291,6 +318,6 @@ class Tensor_2E {
     }
 };
 
-typedef Tensor_2E<double> Tensor_2Ecd;
+using Tensor_2Ecd = Tensor_2E<double>;
 
 #endif  // TWO_ELECTRON_INTEGRALS_H

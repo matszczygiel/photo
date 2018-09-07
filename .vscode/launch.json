@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/photo",
-            "args": [],
+            "args": ["/home/mateusz/workspace/photo/test.inp"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

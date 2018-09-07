@@ -37,17 +37,16 @@ using namespace Eigen;
 
 int main(int argc, char *argv[]) {
     auto start = chrono::system_clock::now();
-    /*
-    if (argc < 3) {
+
+    if (!(argc == 3 || argc == 2)) {
         cout << " Proper usage: ./rec <input name> <settings>\n";
         return EXIT_SUCCESS;
     }
-*/
-    //string input = argv[1];
-    string input = "/home/mateusz/workspace/photo/test.inp";
+
+    string input = argv[1];
     string setting = "n";
-    if (argc > 1)
-        setting = argv[1];
+    if (argc == 3)
+        setting = argv[2];
 
     ifstream ifile(input);
     const Input_data data(ifile);
