@@ -25,7 +25,7 @@ class Tensor_2E {
     typedef bool conjugation_flag;
 
     enum position { positive,
-                    negaive };
+                    negative };
 
     void free() {
         if (pos_cubes == nullptr && neg_cubes == nullptr) {
@@ -174,14 +174,19 @@ class Tensor_2E {
                                 const index& l) const noexcept {
         assert(i < size && j < size && k < size && l < size);
         const auto unq_perm       = get_unq_combination(i, j, k, l);
-        const conjugation_flag& f = std::get<1>(unq_perm);
         const index_array& a      = std::get<0>(unq_perm);
-        if (a[0] < a[3]) {
-            auto val = neg_cubes[a[3]][a[0]][a[1]][a[2]];
-            return f ? conj(val) : val;
-        } else {
-            auto val = pos_cubes[a[3]][a[0] - a[3]][a[1] - a[3]][a[2] - a[3]];
-            return f ? conj(val) : val;
+        const conjugation_flag& f = std::get<1>(unq_perm);
+        const position& p         = std::get<2>(unq_perm);
+
+        switch (p) {
+            case negative: {
+                auto& val = neg_cubes[a[3]][a[0]][a[1]][a[2]];
+                return f ? conj(val) : val;
+            }
+            case positive: {
+                auto& val = pos_cubes[a[3]][a[0] - a[3]][a[1] - a[3]][a[2] - a[3]];
+                return f ? conj(val) : val;
+            }
         }
     }
 
@@ -194,12 +199,18 @@ class Tensor_2E {
         const auto unq_perm       = get_unq_combination(i, j, k, l);
         const index_array& a      = std::get<0>(unq_perm);
         const conjugation_flag& f = std::get<1>(unq_perm);
-        assert((a[0] < a[3] && a[1] < a[3] && a[2] < a[3]) ||
-               (a[0] >= a[3] && a[1] >= a[3] && a[2] >= a[3]));
-        if (a[0] < a[3])
-            neg_cubes[a[3]][a[0]][a[1]][a[2]] = f ? conj(val) : val;
-        else
-            pos_cubes[a[3]][a[0] - a[3]][a[1] - a[3]][a[2] - a[3]] = f ? conj(val) : val;
+        const position& p         = std::get<2>(unq_perm);
+
+        switch (p) {
+            case negative:
+                neg_cubes[a[3]][a[0]][a[1]][a[2]] = f ? conj(val) : val;
+                return;
+            case positive:
+                pos_cubes[a[3]][a[0] - a[3]][a[1] - a[3]][a[2] - a[3]] = f ? conj(val) : val;
+                return;
+            default:
+                assert(true);
+        }
     }
 
     template <int i1, int i2, typename std::enable_if<i1 == 0 && i2 == 1>::type* = nullptr>
@@ -283,38 +294,34 @@ class Tensor_2E {
             for (int j = 0; j < size; ++j)
                 for (int k = 0; k < size; ++k)
                     for (int l = 0; l < size; ++l) {
-                        os << "  " << i << " " << j << " " << k << " " << l << "\n";
+                        os << "  " << i << " " << j << " " << k << " " << l << "          ";
                         os << coef(i, j, k, l) << "\n";
                     }
         os << "\n";
     }
 
    protected:
-    bool is_unique_combination(const index& i,
-                               const index& j,
-                               const index& k,
-                               const index& l) const noexcept {
-        if (i >= l && j >= l && k >= l)
-            return true;
-        else if (i < l && j < l && k < l)
-            return true;
-        else
-            return false;
-    }
-
-    std::pair<index_array, conjugation_flag> get_unq_combination(
+    std::tuple<index_array, conjugation_flag, position> get_unq_combination(
         const index& i,
         const index& j,
         const index& k,
-        const index& l) const {
-        if (is_unique_combination(i, j, k, l))
-            return std::move(std::make_pair(index_array({i, j, k, l}), false));
-        else if (is_unique_combination(k, l, i, j))
-            return std::move(std::make_pair(index_array({k, l, i, j}), false));
-        else if (is_unique_combination(j, i, l, k))
-            return std::move(std::make_pair(index_array({j, i, l, k}), true));
+        const index& l) const noexcept {
+        if (i >= l && j >= l && k >= l)
+            return std::move(std::make_tuple(index_array({i, j, k, l}), false, positive));
+        else if (i < l && j < l && k < l)
+            return std::move(std::make_tuple(index_array({i, j, k, l}), false, negative));
+        else if (k >= j && l >= j && i >= j)
+            return std::move(std::make_tuple(index_array({k, l, i, j}), false, positive));
+        else if (k < j && l < j && i < j)
+            return std::move(std::make_tuple(index_array({k, l, i, j}), false, negative));
+        else if (j >= k && i >= k && l >= k)
+            return std::move(std::make_tuple(index_array({j, i, l, k}), true, positive));
+        else if (j < k && i < k && l < k)
+            return std::move(std::make_tuple(index_array({j, i, l, k}), true, negative));
+        else if (l >= i && k >= i && j >= i)
+            return std::move(std::make_tuple(index_array({l, k, j, i}), true, positive));
         else
-            return std::move(std::make_pair(index_array({l, k, j, i}), true));
+            return std::move(std::make_tuple(index_array({l, k, j, i}), true, negative));
     }
 };
 
