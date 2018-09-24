@@ -56,8 +56,11 @@
         "tensor": "cpp",
         "dense": "cpp",
         "strstream": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "eigenvalues": "cpp"
     },
         "C_Cpp.clang_format_style": "file",
-        "C_Cpp.configurationWarnings": "Disabled"
+        "C_Cpp.configurationWarnings": "Disabled",
+        "C_Cpp.intelliSenseEngineFallback": "Disabled",
+        "C_Cpp.errorSquiggles": "Disabled"
     }

@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <thread>
 
+#include <lapacke.h>
+
 #include "functions.h"
 #include "photo_scf.h"
 
@@ -78,11 +80,12 @@ void PhotoSCF::run(const Eigen::VectorXcd &vec_ion,
     U.col(0)                  = vecC;
     U.block(0, 1, bnkl, bnkl) = MatrixXd::Identity(bnkl, bnkl);
 
-    vecCrs = VectorXcd::Zero(bnkl);
+    //  vecCrs = VectorXcd::Zero(bnkl + 1);
 
     Str = U.adjoint() * S * U;
 
-    vecCr = vecCrs;
+    //vecCr = vecCrs;
+    vecCr = VectorXcd::Zero(bnkl);
 
     vecIrs = vec_ion;
     vecIr  = vecIrs;
@@ -140,15 +143,10 @@ void PhotoSCF::free_ints() {
 
 PhotoSCF::status PhotoSCF::one_step() {
     // R matrices preparation
-    auto kRk_future = std::async(std::launch::async, &Tensor_2Ecd::contract, &Rints, vecC, vecC, 0, 3);
-    auto kkR_future = std::async(std::launch::async, &Tensor_2Ecd::contract, &Rints, vecC, vecC, 0, 1);
-    auto ppR_future = std::async(std::launch::async, &Tensor_2Ecd::contract, &Rints, vecI, vecI, 0, 1);
-    auto pRp_future = std::async(std::launch::async, &Tensor_2Ecd::contract, &Rints, vecI, vecI, 0, 3);
-
-    MatrixXcd kRk = kRk_future.get().topLeftCorner(bnkl, bnkl);
-    MatrixXcd kkR = kkR_future.get().topLeftCorner(bnkl, bnkl);
-    MatrixXcd ppR = ppR_future.get();
-    MatrixXcd pRp = pRp_future.get();
+    auto kRk_future = std::async(std::launch::async, &Tensor_2Ecd::contract<0, 3>, &Rints, vecC, vecC);
+    auto kkR_future = std::async(std::launch::async, &Tensor_2Ecd::contract<0, 1>, &Rints, vecC, vecC);
+    auto ppR_future = std::async(std::launch::async, &Tensor_2Ecd::contract<0, 1>, &Rints, vecI, vecI);
+    auto pRp_future = std::async(std::launch::async, &Tensor_2Ecd::contract<0, 3>, &Rints, vecI, vecI);
 
     auto Hpp = real(scalar_prod(vecI, H, vecI));
     auto Hkk = real(scalar_prod(vecC, H, vecC));
@@ -156,23 +154,31 @@ PhotoSCF::status PhotoSCF::one_step() {
 
     // Print H matrix elements
 
-    cout << " Energy of the system is: " << energy << "\n";
-    cout << "\n"
-         << " H matrix elements: "
-         << "\n";
-    cout << " H_pp = " << Hpp << "\n"
-         << " H_kk = " << Hkk << "\n"
-         << " H_pk = " << Hpk << "\n\n";
+    std::cout << " Energy of the system is: " << energy << "\n";
+    std::cout << "\n"
+              << " H matrix elements: "
+              << "\n";
+    std::cout << " H_pp = " << Hpp << "\n"
+              << " H_kk = " << Hkk << "\n"
+              << " H_pk = " << Hpk << "\n\n";
 
     auto normC = real(scalar_prod(vecC, S, vecC));
     auto normI = real(scalar_prod(vecI, S, vecI));
 
-    cout << "\n"
-         << " Norm squared of the continuum state is: " << normC << "\n";
-    cout << "\n"
-         << " Norm squared of the bound state is: " << normI << "\n";
+    std::cout << " Norm squared of the continuum state is: " << normC << "\n";
+    std::cout << " Norm squared of the bound state is: " << normI << "\n";
 
     /// Compose the set of equation of form Ax=ESx
+
+    MatrixXcd kRk = kRk_future.get().topLeftCorner(bnkl, bnkl);
+    MatrixXcd kkR = kkR_future.get().topLeftCorner(bnkl, bnkl);
+    MatrixXcd ppR = ppR_future.get();
+    MatrixXcd pRp = pRp_future.get();
+
+    cout << "=========\n" << ppR << "\n\n";
+    cout << "=========\n" << pRp << "\n\n";
+     
+
 
     //A matrices prep
 
@@ -187,7 +193,7 @@ PhotoSCF::status PhotoSCF::one_step() {
 
     // assert(AmatC.rows() == (bnkl + 1));
 
-    cout << " A matrices preparation done.\n\n";
+    std::cout << " A matrices preparation done.\n\n";
 
     //S matrices prep
 
@@ -197,35 +203,80 @@ PhotoSCF::status PhotoSCF::one_step() {
     MatrixXcd SmatC =
         ((normI * S) + (S * vecI) * (vecI.adjoint() * S));
 
-    cout << " S matrices preparation done. \n\n";
-    cout << " Solving eigenvalue problem. \n\n";
-
-    Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXcd> es;
+    std::cout << " S matrices preparation done. \n\n";
+    std::cout << " Solving eigenvalue problem. \n\n";
 
     VectorXcd vecIr_dum, vecCr_dum;
 
-    // compise the set Ax = b of overdetermined equations
+    /*   // compose the set Ax = b of overdetermined equations
     MatrixXcd A = AmatC.leftCols(bnkl) - energy * SmatC.leftCols(bnkl);
     VectorXcd b = (-AmatC.rightCols(bkl) + energy * SmatC.rightCols(bkl)) * vecC.tail(bkl);
     vecCr_dum = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
+*/
 
-                  /*
+    AmatC = U.adjoint() * AmatC * U;
+    SmatC = U.adjoint() * SmatC * U;
+
+    ///////Time for the lapacke routine for solving linear equations
+    /*
+    lapack_complex_double *A_mat = new lapack_complex_double[bl * bl];
+    lapack_complex_double *S_mat = new lapack_complex_double[bl * bl];
+    int *IPIV                    = new int[bl];
+    double *enrgs                = new double[bl];
+
+    for (int i = 0; i < bl; ++i)
+        for (int j = 0; j < bl; ++j) {
+            A_mat[i * bl + j] = real(AmatC(i, j)) + I * imag(AmatC(i, j));
+            S_mat[i * bl + j] = real(SmatC(i, j)) + I * imag(SmatC(i, j));
+        }
+
+    int info = LAPACKE_zhegv(LAPACK_ROW_MAJOR, 1, 'N', 'U', bl, A_mat, bl, S_mat, bl, enrgs);
+
+    cout << "info: " << info << "\n\n";
+    for (int i = 0; i < bl; ++i)
+        cout << enrgs[i] << '\n';
+*/
+
+    lapack_complex_double *A_mat = new lapack_complex_double[(bnkl + 1) * (bnkl + 1)];
+    lapack_complex_double *S_mat = new lapack_complex_double[(bnkl + 1) * (bnkl + 1)];
+    int *IPIV                    = new int[(bnkl + 1)];
+    double *enrgs                = new double[(bnkl + 1)];
+
+    for (int i = 0; i < (bnkl + 1); ++i)
+        for (int j = 0; j < (bnkl + 1); ++j) {
+            A_mat[i * (bnkl + 1) + j] = real(AmatC(i, j)) + I * imag(AmatC(i, j));
+            S_mat[i * (bnkl + 1) + j] = real(SmatC(i, j)) + I * imag(SmatC(i, j));
+        }
+
+    int info = LAPACKE_zhegv(LAPACK_ROW_MAJOR, 1, 'N', 'U', (bnkl + 1), A_mat, (bnkl + 1), S_mat, (bnkl + 1), enrgs);
+
+    cout << "info: " << info << "\n\n";
+    for (int i = 0; i < (bnkl + 1); ++i)
+        cout << enrgs[i] << '\n';
+
+    delete[] IPIV;
+    delete[] A_mat;
+    delete[] S_mat;
+    delete[] enrgs;
+
     if (evalC) {
-        es.compute(AmatC, SmatC);
+        Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXcd> es(AmatC, SmatC);
+        if (es.info() != Success)
+            std::cout << "!!!!! eigenslover failure!!!!!\n";
         VectorXd temp;
         int itC;
         int sizeC = AmatC.cols();
 
-        cout << " C eigenvalues:\n";
-        cout << es.eigenvalues() << "\n";
-        
+        std::cout << " C eigenvalues:\n";
+        std::cout << es.eigenvalues() << "\n";
+
         switch (selection) {
             case selection_mth_t::by_energy:
                 temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 temp = temp.cwiseAbs2();
                 temp.minCoeff(&itC);
-                cout << " Iterator to the matching energy of C: " << itC
-                     << " \n and it's enegry: " << es.eigenvalues()[itC] << "\n\n";
+                std::cout << " Iterator to the matching energy of C: " << itC
+                          << " \n and it's enegry: " << es.eigenvalues()[itC] << "\n\n";
 
                 break;
 
@@ -237,32 +288,34 @@ PhotoSCF::status PhotoSCF::one_step() {
                         vecCr_dum.tail(sizeC - 1).dot(Str.bottomRightCorner(sizeC - 1, sizeC - 1) * vecCr_dum.tail(sizeC - 1)));
                 }
                 temp.minCoeff(&itC);
-                cout << " Iterator to the matching norm of C: " << itC;
-                cout << "\n and it's energy: " << es.eigenvalues()[itC] << "\n\n";
+                std::cout << " Iterator to the matching norm of C: " << itC;
+                std::cout << "\n and it's energy: " << es.eigenvalues()[itC] << "\n\n";
                 break;
         }
         vecCr_dum = es.eigenvectors().col(itC) / es.eigenvectors()(0, itC);
+        cout << '\n';
+        cout << " Eigenvector:\n";
+        cout << vecCr_dum << '\n';
     }
-*/
 
-                  if (evalI) {
-        es.compute(AmatI, SmatI);
-        if(es.info() != Success)
-            cout << "!!!!! eigenslover failure!!!!!\n";
+    if (evalI) {
+        Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXcd> es(AmatI, SmatI);
+        if (es.info() != Success)
+            std::cout << "!!!!! eigenslover failure!!!!!\n";
         VectorXd temp;
         int itI;
 
-        cout << " I eigenvalues:\n";
-        cout << es.eigenvalues();
-        cout << "\n";
+        std::cout << " I eigenvalues:\n";
+        std::cout << es.eigenvalues();
+        std::cout << "\n";
 
         switch (selection) {
             case selection_mth_t::by_energy:
                 temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 temp = temp.cwiseAbs2();
                 temp.minCoeff(&itI);
-                cout << " Iterator to the matching energy of I: " << itI
-                     << " \n and it's enegry: " << es.eigenvalues()[itI] << "\n\n";
+                std::cout << " Iterator to the matching energy of I: " << itI
+                          << " \n and it's enegry: " << es.eigenvalues()[itI] << "\n\n";
 
                 break;
 
@@ -274,8 +327,8 @@ PhotoSCF::status PhotoSCF::one_step() {
                     temp(i) = std::norm(vecIrs.dot(Snk * vecIr_dum));
                 }
                 temp.maxCoeff(&itI);
-                cout << " Iterator to the matching norm of I: " << itI;
-                cout << "\n and it's energy: " << es.eigenvalues()[itI] << "\n\n";
+                std::cout << " Iterator to the matching norm of I: " << itI;
+                std::cout << "\n and it's energy: " << es.eigenvalues()[itI] << "\n\n";
 
                 break;
         }
@@ -291,15 +344,16 @@ PhotoSCF::status PhotoSCF::one_step() {
 
     if (evalC) {
         conv_paramC = (vecCr_dum.cwiseAbs() - vecCr.cwiseAbs()).norm();
-        cout << "\n Norm of difference for C: " << conv_paramC << "\n";
+        std::cout << "\n Norm of difference for C: " << conv_paramC << "\n";
         vecCr = vecCr_dum;
     }
     if (evalI) {
         conv_paramI = (vecIr_dum.cwiseAbs() - vecIr.cwiseAbs()).norm();
-        cout << "\n Norm of difference for I: " << conv_paramI << "\n";
+        std::cout << "\n Norm of difference for I: " << conv_paramI << "\n";
         vecIr = vecIr_dum;
     }
 
+    //  vecC.head(bnkl) = vecCr.tail(bnkl);
     vecC.head(bnkl) = vecCr;
     vecI << vecIr, VectorXcd::Zero(bkl);
 

@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
         return EXIT_SUCCESS;
     }
 
-    string input = argv[1];
+    string input   = argv[1];
     string setting = "n";
     if (argc == 3)
         setting = argv[2];
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
     double phi = std::stof(data.first("K_PHI"));
     vector<vector<double>> sigma(job_size, vector<double>(kvals.size(), 0.));
 
-    for (int k = 0; k < kvals.size(); ++k) {
+    for (int k = 0; k < static_cast<int>(kvals.size()); ++k) {
         for (int i = 0; i < job_size; ++i) {
             Vector3d kvec;
             kvec(0) = kvals[k] * sin(theta.at(i)) * cos(phi);
@@ -131,26 +131,15 @@ int main(int argc, char *argv[]) {
             VectorXcd cont_vec = fetch_coulomb_wf(lmax, kvec, norms);
 
             //////////////////////
-            /*
-        PhotoSCF sys(data, k_str);
-        sys.run(orbitals_ion.col(0), cont_vec);
-        sys.free_ints();
 
-        auto vecI = sys.getI();
-        auto vecC = sys.getC();
-        
-*/
+            PhotoSCF sys(data, k_str);
+            sys.run(orbitals_ion.col(indices[k]), cont_vec);
+            sys.free_ints();
+
+            auto vecI = sys.getI();
+            auto vecC = sys.getC();
 
             auto bnkl = std::stoi(data.first("NUMBER_GTO"));
-            auto bkl  = std::stoi(data.first("NUMBER_PWGTO"));
-            auto bl   = bnkl + bkl;
-
-            VectorXcd vecI, vecC;
-            vecI = VectorXcd::Zero(bl);
-            vecC = VectorXcd::Zero(bl);
-
-            vecI.head(bnkl) = orbitals_ion.col(indices[k]);
-            vecC.tail(bkl)  = cont_vec;
 
             //////////////////////////////////
 
@@ -215,7 +204,7 @@ int main(int argc, char *argv[]) {
             cout << " r_kI_sqrt: " << r_kI_sqrt << "\n";
             cout << " \n\n";
 
-            double pk_R_pk, pk_R_kp, norm_k_sqrt;
+            double norm_k_sqrt;
             /*
     auto Rints = reader.load_Rints(Rints_file);
 

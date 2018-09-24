@@ -12,7 +12,8 @@
 using namespace std;
 
 double Norm(double a, int k, int l, int m) {
-    double norm_sqrt = pow((2 * a), -k - l - m - 1.5) * Const_arrays::dfact[k] * Const_arrays::dfact[l] * Const_arrays::dfact[m] * pow(0.5, k + l + m) * pow(M_PI, 1.5);
+    double norm_sqrt = pow((2 * a), -k - l - m - 1.5) * Const_arrays::dfact[k] * Const_arrays::dfact[l] *
+                       Const_arrays::dfact[m] * pow(0.5, k + l + m) * pow(M_PI, 1.5);
     return sqrt(norm_sqrt);
 }
 
@@ -41,11 +42,11 @@ double k_length(const double energy_eV, const double ionization_pot) {
 Eigen::VectorXcd fetch_coulomb_wf(const int& lmax, const Eigen::Vector3d& kvec, const Eigen::VectorXd& norms) {
     std::vector<std::vector<std::vector<double>>> Dfact(lmax + 1);
 
-    for (int l = 0; l <= lmax; l++)
+    for (int l = 0; l <= lmax; l++) {
         Dfact[l].resize(l + 1);
-    for (int l = 0; l <= lmax; l++)
         for (int p = 0; p <= l; p++)
             Dfact[l][p].resize(l - p + 1);
+    }
 
     using std::pow;
     using std::sqrt;

@@ -152,9 +152,9 @@ class Tensor_2E {
 
     ~Tensor_2E() { free(); }
 
-    inline const int get_size() const { return size; }
+    inline int get_size() const { return size; }
 
-    void zero() {
+    void zero() noexcept {
         for (int i = 0; i < size; ++i) {
             for (int it1 = 0; it1 < size - i; ++it1)
                 for (int it2 = 0; it2 < size - i; ++it2)
@@ -173,10 +173,10 @@ class Tensor_2E {
                                 const index& k,
                                 const index& l) const noexcept {
         assert(i < size && j < size && k < size && l < size);
-        const auto unq_perm       = get_unq_combination(i, j, k, l);
-        const index_array& a      = std::get<0>(unq_perm);
-        const conjugation_flag& f = std::get<1>(unq_perm);
-        const position& p         = std::get<2>(unq_perm);
+        const auto unq_perm = get_unq_combination(i, j, k, l);
+        const auto& a       = std::get<0>(unq_perm);
+        const auto& f       = std::get<1>(unq_perm);
+        const auto& p       = std::get<2>(unq_perm);
 
         switch (p) {
             case negative: {
@@ -187,6 +187,9 @@ class Tensor_2E {
                 auto& val = pos_cubes[a[3]][a[0] - a[3]][a[1] - a[3]][a[2] - a[3]];
                 return f ? conj(val) : val;
             }
+            default:
+                assert(true);
+                return 0;
         }
     }
 
@@ -196,10 +199,10 @@ class Tensor_2E {
                        const index& l,
                        const std::complex<T>& val) noexcept {
         assert(i < size && j < size && k < size && l < size);
-        const auto unq_perm       = get_unq_combination(i, j, k, l);
-        const index_array& a      = std::get<0>(unq_perm);
-        const conjugation_flag& f = std::get<1>(unq_perm);
-        const position& p         = std::get<2>(unq_perm);
+        const auto unq_perm = get_unq_combination(i, j, k, l);
+        const auto& a       = std::get<0>(unq_perm);
+        const auto& f       = std::get<1>(unq_perm);
+        const auto& p       = std::get<2>(unq_perm);
 
         switch (p) {
             case negative:
@@ -217,7 +220,7 @@ class Tensor_2E {
     inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
     contract(
         const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
+        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const noexcept {
         assert(vec1.size() == size && vec2.size() == size);
 
         Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
@@ -236,7 +239,7 @@ class Tensor_2E {
     inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
     contract(
         const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
+        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const noexcept {
         assert(vec1.size() == size && vec2.size() == size);
 
         Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
