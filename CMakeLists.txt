@@ -15,9 +15,6 @@ file (GLOB source_files "${source_dir}/*.cpp")
 add_executable(photo ${source_files})
 
 target_link_libraries (photo Eigen3::Eigen)
-target_link_libraries (photo lapacke)
-target_link_libraries (photo lapack)
-target_link_libraries (photo blas)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

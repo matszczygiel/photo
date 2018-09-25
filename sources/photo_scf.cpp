@@ -189,7 +189,7 @@ PhotoSCF::status PhotoSCF::one_step() {
         (Hkk * Snk) + kRk + kkR;
 
     MatrixXcd AmatC =
-        ((normI * H) + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR);
+        (normI * H) + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR;
 
     // assert(AmatC.rows() == (bnkl + 1));
 
@@ -201,7 +201,7 @@ PhotoSCF::status PhotoSCF::one_step() {
         (normC * Snk) + (S.topRows(bnkl) * vecC) * (vecC.adjoint() * S.leftCols(bnkl));
 
     MatrixXcd SmatC =
-        ((normI * S) + (S * vecI) * (vecI.adjoint() * S));
+        (normI * S) + (S * vecI) * (vecI.adjoint() * S);
 
     std::cout << " S matrices preparation done. \n\n";
     std::cout << " Solving eigenvalue problem. \n\n";
@@ -216,48 +216,6 @@ PhotoSCF::status PhotoSCF::one_step() {
 
     AmatC = U.adjoint() * AmatC * U;
     SmatC = U.adjoint() * SmatC * U;
-
-    ///////Time for the lapacke routine for solving linear equations
-    /*
-    lapack_complex_double *A_mat = new lapack_complex_double[bl * bl];
-    lapack_complex_double *S_mat = new lapack_complex_double[bl * bl];
-    int *IPIV                    = new int[bl];
-    double *enrgs                = new double[bl];
-
-    for (int i = 0; i < bl; ++i)
-        for (int j = 0; j < bl; ++j) {
-            A_mat[i * bl + j] = real(AmatC(i, j)) + I * imag(AmatC(i, j));
-            S_mat[i * bl + j] = real(SmatC(i, j)) + I * imag(SmatC(i, j));
-        }
-
-    int info = LAPACKE_zhegv(LAPACK_ROW_MAJOR, 1, 'N', 'U', bl, A_mat, bl, S_mat, bl, enrgs);
-
-    cout << "info: " << info << "\n\n";
-    for (int i = 0; i < bl; ++i)
-        cout << enrgs[i] << '\n';
-*/
-
-    lapack_complex_double *A_mat = new lapack_complex_double[(bnkl + 1) * (bnkl + 1)];
-    lapack_complex_double *S_mat = new lapack_complex_double[(bnkl + 1) * (bnkl + 1)];
-    int *IPIV                    = new int[(bnkl + 1)];
-    double *enrgs                = new double[(bnkl + 1)];
-
-    for (int i = 0; i < (bnkl + 1); ++i)
-        for (int j = 0; j < (bnkl + 1); ++j) {
-            A_mat[i * (bnkl + 1) + j] = real(AmatC(i, j)) + I * imag(AmatC(i, j));
-            S_mat[i * (bnkl + 1) + j] = real(SmatC(i, j)) + I * imag(SmatC(i, j));
-        }
-
-    int info = LAPACKE_zhegv(LAPACK_ROW_MAJOR, 1, 'N', 'U', (bnkl + 1), A_mat, (bnkl + 1), S_mat, (bnkl + 1), enrgs);
-
-    cout << "info: " << info << "\n\n";
-    for (int i = 0; i < (bnkl + 1); ++i)
-        cout << enrgs[i] << '\n';
-
-    delete[] IPIV;
-    delete[] A_mat;
-    delete[] S_mat;
-    delete[] enrgs;
 
     if (evalC) {
         Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXcd> es(AmatC, SmatC);

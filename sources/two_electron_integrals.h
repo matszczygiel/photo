@@ -309,22 +309,29 @@ class Tensor_2E {
         const index& j,
         const index& k,
         const index& l) const noexcept {
-        if (i >= l && j >= l && k >= l)
+        int u1 = i + j - k - l;
+        int u2 = i - j + k - l;
+        int u3 = -i + j + k - l;
+        if (u1 >= 0 && u2 >= 0 && u3 >= 0)
             return std::move(std::make_tuple(index_array({i, j, k, l}), false, positive));
-        else if (i < l && j < l && k < l)
+        else if (u1 < 0 && u2 < 0 && u3 < 0)
             return std::move(std::make_tuple(index_array({i, j, k, l}), false, negative));
-        else if (k >= j && l >= j && i >= j)
+        else if (u1 <= 0 && u2 >= 0 && u3 <= 0)
             return std::move(std::make_tuple(index_array({k, l, i, j}), false, positive));
-        else if (k < j && l < j && i < j)
+        else if (u1 > 0 && u2 < 0 && u3 > 0)
             return std::move(std::make_tuple(index_array({k, l, i, j}), false, negative));
-        else if (j >= k && i >= k && l >= k)
+        else if (u1 >= 0 && u2 <= 0 && u3 <= 0)
             return std::move(std::make_tuple(index_array({j, i, l, k}), true, positive));
-        else if (j < k && i < k && l < k)
+        else if (u1 < 0 && u2 > 0 && u3 > 0)
             return std::move(std::make_tuple(index_array({j, i, l, k}), true, negative));
-        else if (l >= i && k >= i && j >= i)
+        else if (u1 <= 0 && u2 <= 0 && u3 >= 0)
             return std::move(std::make_tuple(index_array({l, k, j, i}), true, positive));
-        else
+        else if (u1 > 0 && u2 > 0 && u3 < 0)
             return std::move(std::make_tuple(index_array({l, k, j, i}), true, negative));
+        else {
+            assert(true);
+            return std::move(std::make_tuple(index_array({i, j, k, l}), false, positive));
+        }
     }
 };
 
