@@ -49,7 +49,7 @@ class PhotoSCF {
 
     Eigen::VectorXcd vecI, vecC;
     Eigen::VectorXcd vecIr, vecCr;
-    Eigen::VectorXcd vecIrs, vecCrs;
+    Eigen::VectorXcd vecIrs;
 
     Tensor_2Ecd Rints;
     Eigen::MatrixXcd H, S;

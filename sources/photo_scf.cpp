@@ -4,8 +4,6 @@
 #include <stdexcept>
 #include <thread>
 
-#include <lapacke.h>
-
 #include "functions.h"
 #include "photo_scf.h"
 
@@ -80,12 +78,9 @@ void PhotoSCF::run(const Eigen::VectorXcd &vec_ion,
     U.col(0)                  = vecC;
     U.block(0, 1, bnkl, bnkl) = MatrixXd::Identity(bnkl, bnkl);
 
-    //  vecCrs = VectorXcd::Zero(bnkl + 1);
-
     Str = U.adjoint() * S * U;
 
-    //vecCr = vecCrs;
-    vecCr = VectorXcd::Zero(bnkl);
+    vecCr = VectorXcd::Zero(bnkl + 1);
 
     vecIrs = vec_ion;
     vecIr  = vecIrs;
@@ -175,11 +170,6 @@ PhotoSCF::status PhotoSCF::one_step() {
     MatrixXcd ppR = ppR_future.get();
     MatrixXcd pRp = pRp_future.get();
 
-    cout << "=========\n" << ppR << "\n\n";
-    cout << "=========\n" << pRp << "\n\n";
-     
-
-
     //A matrices prep
 
     MatrixXcd AmatI =
@@ -190,8 +180,6 @@ PhotoSCF::status PhotoSCF::one_step() {
 
     MatrixXcd AmatC =
         (normI * H) + (H * vecI) * (vecI.adjoint() * S) + (S * vecI) * (vecI.adjoint() * H) + Hpp * S + pRp + ppR;
-
-    // assert(AmatC.rows() == (bnkl + 1));
 
     std::cout << " A matrices preparation done.\n\n";
 
@@ -251,9 +239,6 @@ PhotoSCF::status PhotoSCF::one_step() {
                 break;
         }
         vecCr_dum = es.eigenvectors().col(itC) / es.eigenvectors()(0, itC);
-        cout << '\n';
-        cout << " Eigenvector:\n";
-        cout << vecCr_dum << '\n';
     }
 
     if (evalI) {
@@ -311,8 +296,7 @@ PhotoSCF::status PhotoSCF::one_step() {
         vecIr = vecIr_dum;
     }
 
-    //  vecC.head(bnkl) = vecCr.tail(bnkl);
-    vecC.head(bnkl) = vecCr;
+    vecC.head(bnkl) = vecCr.tail(bnkl);
     vecI << vecIr, VectorXcd::Zero(bkl);
 
     if (!(evalI && evalC))

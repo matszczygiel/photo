@@ -1,4 +1,4 @@
-COMPUTE_BOUND		N
+COMPUTE_BOUND		Y
 COMPUTE_CONTINUUM 	Y
 
 ENERGY_I_STATE 		-1.1737061600
@@ -19,7 +19,7 @@ GAUGE			    dipole
 
 WRITE	    		Y
 PATH_OUT            /home/mateusz/Documents/cpp/photo/data/h2/dod1/res/
-FILE_OUT		    21par_test2.out
+FILE_OUT		    21par_test3.out
 
 NUMBER_GTO          74
 NUMBER_PWGTO        10
