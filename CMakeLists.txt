@@ -1,22 +1,16 @@
-cmake_minimum_required(VERSION 3.0.0)
-project(photo VERSION 0.1.0)
+cmake_minimum_required(VERSION 3.1.0)
+project(photo VERSION 0.1.0 LANGUAGES CXX)
 
-include(CTest)
-enable_testing()
+file(GLOB sources ${CMAKE_CURRENT_SOURCE_DIR}/sources/*.cpp)
+file(GLOB headers ${CMAKE_CURRENT_SOURCE_DIR}/sources/*.h)
 
-find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+add_executable(${PROJECT_NAME} ${sources} ${headers})
 
-set(CMAKE_CXX_STANDARD 11)
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe -Wall -pthread -I/usr/local/include/eigen3")
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set (source_dir "${PROJECT_SOURCE_DIR}/sources/")
-file (GLOB source_files "${source_dir}/*.cpp")
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -pipe)
 
-add_executable(photo ${source_files})
-
-target_link_libraries (photo Eigen3::Eigen)
-
-set(CPACK_PROJECT_NAME ${PROJECT_NAME})
-set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
-
-include(CPack)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Threads REQUIRED)
+target_link_libraries(photo Eigen3::Eigen Threads::Threads)

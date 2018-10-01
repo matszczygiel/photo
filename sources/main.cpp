@@ -175,6 +175,9 @@ int main(int argc, char *argv[]) {
             T(2) = S_kI * Dz_pI + S_pI * Dz_kI;
             T *= sqrt(2.);
 
+            //normalize to energy scale
+            T *= sqrt(kvals[k]);
+
             cout << " Dipole moment: \n";
             cout << T << "\n\n";
 
@@ -225,7 +228,7 @@ int main(int argc, char *argv[]) {
 
             //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
 
-            sigma.at(i).at(k) += dsigma(photon, j, T);
+            sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
 
             cout << " To state:            " << fixed << indices[k] << "\n";
             cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
@@ -280,71 +283,71 @@ int main(int argc, char *argv[]) {
     // TEST OF CI
     // H transformation
     /*	MatrixXd H = HF.transpose() * Hnk.real() * HF;
-	MatrixXd CI = get_CI_coefficients(jc.getFileCI(), bnkl);
-	double En_CI = 2. * (CI * H * CI).trace();
+        MatrixXd CI = get_CI_coefficients(jc.getFileCI(), bnkl);
+        double En_CI = 2. * (CI * H * CI).trace();
 
-	Two_electron_ints_D two_el_real, temp_two;
-	read_two_el_from_binary_slice(two_el_real, jc.getFile2E(), bnkl, false);
+        Two_electron_ints_D two_el_real, temp_two;
+        read_two_el_from_binary_slice(two_el_real, jc.getFile2E(), bnkl, false);
 
-	TensorMap<Tensor<double, 2>> CI_tens(CI.data(), bnkl, bnkl);
-	TensorMap<Tensor<double, 2>> HF_tens(HF.data(), bnkl, bnkl);
+        TensorMap<Tensor<double, 2>> CI_tens(CI.data(), bnkl, bnkl);
+        TensorMap<Tensor<double, 2>> HF_tens(HF.data(), bnkl, bnkl);
 
-	// Two_el transformation
-	Eigen::array<Eigen::IndexPair<int>, 1> dims_0, dims_1, dims_2, dims_3;
-	dims_0 = {IndexPair<int>(0, 0)};
-	dims_1 = {IndexPair<int>(0, 1)};
-	dims_2 = {IndexPair<int>(0, 2)};
-	dims_3 = {IndexPair<int>(0, 3)};
+        // Two_el transformation
+        Eigen::array<Eigen::IndexPair<int>, 1> dims_0, dims_1, dims_2, dims_3;
+        dims_0 = {IndexPair<int>(0, 0)};
+        dims_1 = {IndexPair<int>(0, 1)};
+        dims_2 = {IndexPair<int>(0, 2)};
+        dims_3 = {IndexPair<int>(0, 3)};
 
-	temp_two = HF_tens.contract(two_el_real, dims_0);
-	two_el_real = temp_two;
-	temp_two = HF_tens.contract(two_el_real, dims_1);
-	two_el_real = temp_two;
-	temp_two = HF_tens.contract(two_el_real, dims_2);
-	two_el_real = temp_two;
-	temp_two = HF_tens.contract(two_el_real, dims_3);
-	two_el_real = temp_two;
+        temp_two = HF_tens.contract(two_el_real, dims_0);
+        two_el_real = temp_two;
+        temp_two = HF_tens.contract(two_el_real, dims_1);
+        two_el_real = temp_two;
+        temp_two = HF_tens.contract(two_el_real, dims_2);
+        two_el_real = temp_two;
+        temp_two = HF_tens.contract(two_el_real, dims_3);
+        two_el_real = temp_two;
 
-	Eigen::array<Eigen::IndexPair<int>, 2> dims_pair_0, dims_pair_1;
-	dims_pair_0 = {IndexPair<int>(0, 0), IndexPair<int>(1, 2)};
-	dims_pair_1 = {IndexPair<int>(0, 0), IndexPair<int>(1, 1)};
-	Tensor<double, 2> temp = CI_tens.contract(two_el_real, dims_pair_0);
-	Tensor<double, 0> temp_2 = CI_tens.contract(temp, dims_pair_1);
+        Eigen::array<Eigen::IndexPair<int>, 2> dims_pair_0, dims_pair_1;
+        dims_pair_0 = {IndexPair<int>(0, 0), IndexPair<int>(1, 2)};
+        dims_pair_1 = {IndexPair<int>(0, 0), IndexPair<int>(1, 1)};
+        Tensor<double, 2> temp = CI_tens.contract(two_el_real, dims_pair_0);
+        Tensor<double, 0> temp_2 = CI_tens.contract(temp, dims_pair_1);
 
-	En_CI += temp_2(0);
+        En_CI += temp_2(0);
 
-	auto HF_energies = get_HF_energies(jc.getFileHFEnergy(), bnkl);
+        auto HF_energies = get_HF_energies(jc.getFileHFEnergy(), bnkl);
 
-	cout << " CI energy: " << En_CI << "\n";
+        cout << " CI energy: " << En_CI << "\n";
 
-	// Dipole moment
-	MatrixXcd T_ij_x, T_ij_y, T_ij_z;
-	T_ij_x = (vecC.adjoint() * Dx.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
-	T_ij_x += (veci.adjoint() * Dxnk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
-	T_ij_x = HF.transpose() * T_ij_x * HF;
-	T_ij_x += T_ij_x.transpose().eval();
+        // Dipole moment
+        MatrixXcd T_ij_x, T_ij_y, T_ij_z;
+        T_ij_x = (vecC.adjoint() * Dx.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
+        T_ij_x += (veci.adjoint() * Dxnk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
+        T_ij_x = HF.transpose() * T_ij_x * HF;
+        T_ij_x += T_ij_x.transpose().eval();
 
-	T_ij_y = (vecC.adjoint() * Dy.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
-	T_ij_y += (veci.adjoint() * Dynk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
-	T_ij_y = HF.transpose() * T_ij_y * HF;
-	T_ij_y += T_ij_y.transpose().eval();
+        T_ij_y = (vecC.adjoint() * Dy.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
+        T_ij_y += (veci.adjoint() * Dynk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
+        T_ij_y = HF.transpose() * T_ij_y * HF;
+        T_ij_y += T_ij_y.transpose().eval();
 
-	T_ij_z = (vecC.adjoint() * Dz.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
-	T_ij_z += (veci.adjoint() * Dznk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
-	T_ij_z = HF.transpose() * T_ij_z * HF;
-	T_ij_z += T_ij_z.transpose().eval();
+        T_ij_z = (vecC.adjoint() * Dz.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
+        T_ij_z += (veci.adjoint() * Dznk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
+        T_ij_z = HF.transpose() * T_ij_z * HF;
+        T_ij_z += T_ij_z.transpose().eval();
 
-	Vector3cd T;
-	T(0) = (CI * T_ij_x).trace();
-	T(1) = (CI * T_ij_y).trace();
-	T(2) = (CI * T_ij_z).trace();
+        Vector3cd T;
+        T(0) = (CI * T_ij_x).trace();
+        T(1) = (CI * T_ij_y).trace();
+        T(2) = (CI * T_ij_z).trace();
 
-	factor = T.squaredNorm();
-	factor /= 4.;
-	sig = Sigma(jc.getK(), factor, jc.getIB());
+        factor = T.squaredNorm();
+        factor /= 4.;
+        sig = Sigma(jc.getK(), factor, jc.getIB());
 
-	cout << " CI sigma: " << sig << "\n";
-	*/
+        cout << " CI sigma: " << sig << "\n";
+        */
     // successful exit
     auto end = chrono::system_clock::now();
 

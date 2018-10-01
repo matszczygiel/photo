@@ -13,13 +13,13 @@
 
 template <typename T>
 class Tensor_2E {
-   private:
+private:
     std::complex<T>**** pos_cubes = nullptr;
     std::complex<T>**** neg_cubes = nullptr;
 
     int size = 0;
 
-   public:
+public:
     typedef int index;
     typedef std::array<index, 4> index_array;
     typedef bool conjugation_flag;
@@ -95,14 +95,14 @@ class Tensor_2E {
             for (int it1 = 0; it1 < size - i; ++it1)
                 for (int it2 = 0; it2 < size - i; ++it2)
                     std::copy(&other.pos_cubes[i][it1][it2][0],
-                              &other.pos_cubes[i][it1][it2][size - i],
-                              pos_cubes[i][it1][it2]);
+                            &other.pos_cubes[i][it1][it2][size - i],
+                            pos_cubes[i][it1][it2]);
 
             for (int it1 = 0; it1 < i; ++it1)
                 for (int it2 = 0; it2 < i; ++it2)
                     std::copy(&other.neg_cubes[i][it1][it2][0],
-                              &other.neg_cubes[i][it1][it2][i],
-                              neg_cubes[i][it1][it2]);
+                            &other.neg_cubes[i][it1][it2][i],
+                            neg_cubes[i][it1][it2]);
         }
     }
 
@@ -115,14 +115,14 @@ class Tensor_2E {
                 for (int it1 = 0; it1 < size - i; ++it1)
                     for (int it2 = 0; it2 < size - i; ++it2)
                         std::copy(&other.pos_cubes[i][it1][it2][0],
-                                  &other.pos_cubes[i][it1][it2][size - i],
-                                  pos_cubes[i][it1][it2]);
+                                &other.pos_cubes[i][it1][it2][size - i],
+                                pos_cubes[i][it1][it2]);
 
                 for (int it1 = 0; it1 < i; ++it1)
                     for (int it2 = 0; it2 < i; ++it2)
                         std::copy(&other.neg_cubes[i][it1][it2][0],
-                                  &other.neg_cubes[i][it1][it2][i],
-                                  neg_cubes[i][it1][it2]);
+                                &other.neg_cubes[i][it1][it2][i],
+                                neg_cubes[i][it1][it2]);
             }
         }
         return *this;
@@ -159,12 +159,12 @@ class Tensor_2E {
             for (int it1 = 0; it1 < size - i; ++it1)
                 for (int it2 = 0; it2 < size - i; ++it2)
                     std::fill(&pos_cubes[i][it1][it2][0],
-                              &pos_cubes[i][it1][it2][size - i], 0);
+                            &pos_cubes[i][it1][it2][size - i], 0);
 
             for (int it1 = 0; it1 < i; ++it1)
                 for (int it2 = 0; it2 < i; ++it2)
                     std::fill(&neg_cubes[i][it1][it2][0],
-                              &neg_cubes[i][it1][it2][i], 0);
+                            &neg_cubes[i][it1][it2][i], 0);
         }
     }
 
@@ -180,13 +180,13 @@ class Tensor_2E {
 
         switch (p) {
             case negative: {
-                auto& val = neg_cubes[a[3]][a[0]][a[1]][a[2]];
-                return f ? conj(val) : val;
-            }
+                    auto& val = neg_cubes[a[3]][a[0]][a[1]][a[2]];
+                    return f ? conj(val) : val;
+                }
             case positive: {
-                auto& val = pos_cubes[a[3]][a[0] - a[3]][a[1] - a[3]][a[2] - a[3]];
-                return f ? conj(val) : val;
-            }
+                    auto& val = pos_cubes[a[3]][a[0] - a[3]][a[1] - a[3]][a[2] - a[3]];
+                    return f ? conj(val) : val;
+                }
             default:
                 assert(true);
                 return 0;
@@ -219,8 +219,8 @@ class Tensor_2E {
     template <int i1, int i2, typename std::enable_if<i1 == 0 && i2 == 1>::type* = nullptr>
     inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
     contract(
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const noexcept {
+            const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
+            const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const noexcept {
         assert(vec1.size() == size && vec2.size() == size);
 
         Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
@@ -238,8 +238,8 @@ class Tensor_2E {
     template <int i1, int i2, typename std::enable_if<i1 == 0 && i2 == 3>::type* = nullptr>
     inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
     contract(
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const noexcept {
+            const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
+            const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const noexcept {
         assert(vec1.size() == size && vec2.size() == size);
 
         Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
@@ -257,8 +257,8 @@ class Tensor_2E {
     template <int i1, int i2, typename std::enable_if<i1 == 2 && i2 == 1>::type* = nullptr>
     inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
     contract(
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
+            const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
+            const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
         assert(vec1.size() == size && vec2.size() == size);
 
         Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
@@ -276,8 +276,8 @@ class Tensor_2E {
     template <int i1, int i2, typename std::enable_if<i1 == 2 && i2 == 3>::type* = nullptr>
     inline Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic>
     contract(
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
-        const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
+            const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec1,
+            const Eigen::Matrix<std::complex<T>, Eigen::Dynamic, 1>& vec2) const {
         assert(vec1.size() == size && vec2.size() == size);
 
         Eigen::Matrix<std::complex<T>, Eigen::Dynamic, Eigen::Dynamic> res(size, size);
@@ -303,12 +303,12 @@ class Tensor_2E {
         os << "\n";
     }
 
-   protected:
+protected:
     std::tuple<index_array, conjugation_flag, position> get_unq_combination(
-        const index& i,
-        const index& j,
-        const index& k,
-        const index& l) const noexcept {
+            const index& i,
+            const index& j,
+            const index& k,
+            const index& l) const noexcept {
         int u1 = i + j - k - l;
         int u2 = i - j + k - l;
         int u3 = -i + j + k - l;

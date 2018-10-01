@@ -5,17 +5,13 @@
 #include <iostream>
 #include <string>
 
+#include <boost/math/special_functions/factorials.hpp>
+
 #include "constants.h"
 #include "functions.h"
 #include "harmonics.h"
 
 using namespace std;
-
-double Norm(double a, int k, int l, int m) {
-    double norm_sqrt = pow((2 * a), -k - l - m - 1.5) * Const_arrays::dfact[k] * Const_arrays::dfact[l] *
-                       Const_arrays::dfact[m] * pow(0.5, k + l + m) * pow(M_PI, 1.5);
-    return sqrt(norm_sqrt);
-}
 
 double Energy(const double k, const double ionization_pot) {
     double energy_ion = -2.8616175470;
@@ -29,6 +25,14 @@ double dsigma(const double& photon, const Eigen::Vector3d& polarization, const E
     double post_fct = std::norm(polarization.dot(dipole));
     return pre_fct * post_fct;
 }
+
+double sigma_tot_spherical_symetry(const double& photon, const Eigen::Vector3cd& dipole) {
+    double c        = 137.035999139;
+    double pre_fct  = 16. / 3. * std::pow(M_PI, 3) * photon / c;
+    double post_fct = dipole.squaredNorm();
+    return pre_fct * post_fct * au_to_barns / 1000.;
+}
+
 
 double photonEeV(const double k, const double ionization_pot) {
     double res = (k * k * 0.5 + ionization_pot) * 27.211385;
@@ -50,6 +54,7 @@ Eigen::VectorXcd fetch_coulomb_wf(const int& lmax, const Eigen::Vector3d& kvec, 
 
     using std::pow;
     using std::sqrt;
+    using boost::math::double_factorial;
 
     for (int l = 0; l <= lmax; l++)
         for (int p = 0; p <= l; p++)
@@ -57,7 +62,11 @@ Eigen::VectorXcd fetch_coulomb_wf(const int& lmax, const Eigen::Vector3d& kvec, 
                 Dfact[l][p][q] = 0.0;
                 for (int m = -l; m <= l; m++)
                     Dfact[l][p][q] += Harmonics::NoNormCalcClmR(l, m, p, q, l - p - q) * Harmonics::Y(l, m, kvec);
-                Dfact[l][p][q] *= pow(M_PI, 0.25) * sqrt(Const_arrays::dfact[p] * Const_arrays::dfact[q] * Const_arrays::dfact[l - p - q]) / pow(2.0, 0.25 + l);
+
+                Dfact[l][p][q] *= pow(M_PI, 0.25) / pow(2.0, 0.25 + l) *
+                                  sqrt(double_factorial<double>(2 * p - 1) *
+                                       double_factorial<double>(2 * q - 1) *
+                                       double_factorial<double>(2 * (l - p - q) - 1));
             };
 
     std::vector<std::complex<double>> vec_cont = Gamess::order_set<std::complex<double>, double>(Dfact);
