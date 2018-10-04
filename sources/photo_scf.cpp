@@ -81,6 +81,7 @@ void PhotoSCF::run(const Eigen::VectorXcd &vec_ion,
     Str = U.adjoint() * S * U;
 
     vecCr = VectorXcd::Zero(bnkl + 1);
+//    vecCr = VectorXcd::Zero(bnkl);
 
     vecIrs = vec_ion;
     vecIr  = vecIrs;
@@ -196,8 +197,8 @@ PhotoSCF::status PhotoSCF::one_step() {
 
     VectorXcd vecIr_dum, vecCr_dum;
 
-    /*   // compose the set Ax = b of overdetermined equations
-    MatrixXcd A = AmatC.leftCols(bnkl) - energy * SmatC.leftCols(bnkl);
+       // compose the set Ax = b of overdetermined equations
+/*    MatrixXcd A = AmatC.leftCols(bnkl) - energy * SmatC.leftCols(bnkl);
     VectorXcd b = (-AmatC.rightCols(bkl) + energy * SmatC.rightCols(bkl)) * vecC.tail(bkl);
     vecCr_dum = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
 */

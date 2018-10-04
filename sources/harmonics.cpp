@@ -10,7 +10,7 @@
 using boost::math::factorial;
 using boost::math::binomial_coefficient;
 
-using namespace math;
+using namespace math_utils;
 
 
 double Harmonics::NoNormCalcClmR(const int &l, const int &m,

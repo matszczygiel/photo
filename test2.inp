@@ -1,4 +1,4 @@
-COMPUTE_BOUND		Y
+COMPUTE_BOUND		N
 COMPUTE_CONTINUUM 	Y
 
 ENERGY_I_STATE 		-1.1737061600
@@ -19,13 +19,13 @@ GAUGE			    dipole
 
 WRITE	    		Y
 PATH_OUT            /home/mateusz/Documents/cpp/photo/data/h2/dod1/res/
-FILE_OUT		    21par_test3.out
+FILE_OUT		    21par_test4.out
 
 NUMBER_GTO          74
 NUMBER_PWGTO        10
 MAX_L               2
 NAME                dod1
 K_THETA             0.000000  0.174533  0.349066  0.523599  0.698132  0.872665  1.047198  1.221730  1.396263  1.570796
-K_PHI               0  
+K_PHI               0
 POL_THETA           0
 POL_PHI             0

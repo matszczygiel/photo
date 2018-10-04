@@ -1,31 +1,32 @@
 COMPUTE_BOUND		Y
-COMPUTE_CONTINUUM 	N
+COMPUTE_CONTINUUM 	Y
 
-ENERGY_I_STATE 		-2.8910453541
+ENERGY_I_STATE 		-2.9002884381
 R                       1.0e+15
-PHOTON_EN               27.567
+PHOTON_EN               26.675
 
-PATH_IN      	        /home/mateusz/Documents/cpp/photo/data/dof2/
+PATH_IN      	        /home/mateusz/Documents/cpp/photo/data/doh/
 FILES_1E		file1E_He_k      .F
 FILES_2E		file2E_He_k      .F
 FILES_NORM		norm1E_He_k      .F
-FILE_HF_I_VEC	        c.dat
-FILE_CI		        ci.dat
-FILE_HF_F_VEC           ic.dat
-FILE_HF_F_EN            ie.dat
+FILE_HF_I_VEC	        He_c.dat
+FILE_CI		        He_ci.dat
+FILE_HF_F_VEC           Hep_c.dat
+FILE_HF_F_EN            Hep_e.dat
 
 SELECTION_METHOD	energy
 GAUGE			dipole
 
 WRITE	    		Y
-PATH_OUT                /home/mateusz/Documents/cpp/photo/data/dof2/res/
+PATH_OUT                /home/mateusz/Documents/cpp/photo/data/doh/res/
 FILE_OUT	        res.out
 
-NUMBER_GTO              99
-NUMBER_PWGTO            20
-MAX_L                   3
+NUMBER_GTO              74
+NUMBER_PWGTO            56
+MAX_L                   5
 NAME                    dof2
 K_THETA                 1.570796
 K_PHI                   0
 POL_THETA               1.570796
 POL_PHI                 0
+

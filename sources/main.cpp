@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     auto start = chrono::system_clock::now();
 
     if (!(argc == 3 || argc == 2)) {
-        cout << " Proper usage: ./rec <input name> <settings>\n";
+        cout << " Proper usage: ./photo <input name> <settings>\n";
         return EXIT_SUCCESS;
     }
 
@@ -186,13 +186,13 @@ int main(int argc, char *argv[]) {
             j(1) = sin(ptheta) * sin(pphi);
             j(2) = cos(ptheta);
 
-            double r_pI_sqrt, r_kI_sqrt;
+ /*           double r_pI_sqrt, r_kI_sqrt;
 
             r_pI_sqrt = norm(Dx_pI) + norm(Dy_pI) + norm(Dz_pI);
             r_kI_sqrt = norm(Dx_kI) + norm(Dy_kI) + norm(Dz_kI);
-
+*/
             auto S_pk = vecI.dot(S * vecC);
-
+/*
             cout << "\n"
                  << " S_pk : " << S_pk << "\n\n";
 
@@ -207,8 +207,6 @@ int main(int argc, char *argv[]) {
             cout << " r_kI_sqrt: " << r_kI_sqrt << "\n";
             cout << " \n\n";
 
-            double norm_k_sqrt;
-            /*
     auto Rints = reader.load_Rints(Rints_file);
 
     MatrixXcd pp_R  = Rints.contract(vecI, vecI, 0, 1);
@@ -219,7 +217,7 @@ int main(int argc, char *argv[]) {
     pk_R_pk     = real(vecC.dot(pp_R * vecC));
     pk_R_kp     = real(vecC.dot(p_R_p * vecC));
     */
-            norm_k_sqrt = real(vecC.dot(S * vecC));
+            double norm_k_sqrt = real(vecC.dot(S * vecC));
 
             double norm_psi = 2 * (norm_k_sqrt + norm(S_pk));
             cout << " Norm of the whole state: " << norm_psi << "\n\n";
@@ -228,7 +226,12 @@ int main(int argc, char *argv[]) {
 
             //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
 
-            sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
+
+
+            // keep this for He
+            // sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
+
+            sigma.at(i).at(k) += dsigma(photon, j, T);
 
             cout << " To state:            " << fixed << indices[k] << "\n";
             cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
@@ -243,7 +246,7 @@ int main(int argc, char *argv[]) {
     char token;
     std::string arg = "WRITE";
 
-    token = std::tolower(*data.first(arg).begin());
+    token = std::tolower(*(data.first(arg).begin()));
     if (token == 'y')
         write = true;
     else if (token == 'n')

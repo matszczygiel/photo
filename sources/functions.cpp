@@ -20,15 +20,13 @@ double Energy(const double k, const double ionization_pot) {
 }
 
 double dsigma(const double& photon, const Eigen::Vector3d& polarization, const Eigen::Vector3cd& dipole) {
-    double c        = 137.035999139;
-    double pre_fct  = 4. * M_PI * M_PI * photon / c;
+    double pre_fct  = 4. * M_PI * M_PI * photon / speed_of_light;
     double post_fct = std::norm(polarization.dot(dipole));
-    return pre_fct * post_fct;
+    return pre_fct * post_fct * au_to_barns * 1.0e-6;
 }
 
 double sigma_tot_spherical_symetry(const double& photon, const Eigen::Vector3cd& dipole) {
-    double c        = 137.035999139;
-    double pre_fct  = 16. / 3. * std::pow(M_PI, 3) * photon / c;
+    double pre_fct  = 16. / 3. * std::pow(M_PI, 3) * photon / speed_of_light;
     double post_fct = dipole.squaredNorm();
     return pre_fct * post_fct * au_to_barns * 1.0e-6;
 }
@@ -76,7 +74,8 @@ Eigen::VectorXcd fetch_coulomb_wf(const int& lmax, const Eigen::Vector3d& kvec,
                                        double_factorial<double>(argz));
             };
 
-    std::vector<std::complex<double>> vec_cont = Gamess::order_set<std::complex<double>, double>(Dfact);
+    std::vector<std::complex<double>> vec_cont =
+            Gamess::order_set<std::complex<double>, double>(Dfact);
 
     Eigen::VectorXcd vec = Eigen::Map<Eigen::VectorXcd>(vec_cont.data(), vec_cont.size());
     for (int i = 0; i < vec.size(); i++)
