@@ -1,4 +1,4 @@
-COMPUTE_BOUND		Y
+COMPUTE_BOUND		N
 COMPUTE_CONTINUUM 	Y
 
 ENERGY_I_STATE 		-2.9002884381
@@ -24,7 +24,7 @@ FILE_OUT	        res.out
 NUMBER_GTO              74
 NUMBER_PWGTO            56
 MAX_L                   5
-NAME                    dof2
+NAME                    doh
 K_THETA                 1.570796
 K_PHI                   0
 POL_THETA               1.570796

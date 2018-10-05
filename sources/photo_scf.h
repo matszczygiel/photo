@@ -19,7 +19,8 @@ class PhotoSCF {
 
     enum selection_mth_t {
         by_energy,
-        by_norm
+        by_norm,
+        by_enegry_above
     };
 
     PhotoSCF(const Input_data &data, const std::string &k);

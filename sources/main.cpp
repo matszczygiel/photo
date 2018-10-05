@@ -229,9 +229,9 @@ int main(int argc, char *argv[]) {
 
 
             // keep this for He
-            // sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
+            sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
 
-            sigma.at(i).at(k) += dsigma(photon, j, T);
+            //sigma.at(i).at(k) += dsigma(photon, j, T);
 
             cout << " To state:            " << fixed << indices[k] << "\n";
             cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";

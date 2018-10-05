@@ -39,6 +39,8 @@ PhotoSCF::PhotoSCF(const Input_data &data, const std::string &k)
         selection = by_energy;
     else if (data.first(arg) == "norm")
         selection = by_norm;
+    else if (data.first(arg) == "energy_above")
+        selection = by_enegry_above;
     else
         throw std::runtime_error("Invalid argument for" + arg + ".");
 
@@ -210,8 +212,8 @@ PhotoSCF::status PhotoSCF::one_step() {
         Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXcd> es(AmatC, SmatC);
         if (es.info() != Success)
             std::cout << "!!!!! eigenslover failure!!!!!\n";
-        VectorXd temp;
         int itC;
+        VectorXd temp;
         int sizeC = AmatC.cols();
 
         std::cout << " C eigenvalues:\n";
@@ -222,9 +224,16 @@ PhotoSCF::status PhotoSCF::one_step() {
                 temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 temp = temp.cwiseAbs2();
                 temp.minCoeff(&itC);
-                std::cout << " Iterator to the matching energy of C: " << itC
-                          << " \n and it's enegry: " << es.eigenvalues()[itC] << "\n\n";
+                break;
 
+            case selection_mth_t:by_enegry_above:
+                temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
+                for(int i = 0; i < temp.size(); ++i) {
+                    if(temp(i) > 0) {
+                        itC = i;
+                        break;
+                    }
+                }
                 break;
 
             case selection_mth_t::by_norm:
@@ -235,10 +244,10 @@ PhotoSCF::status PhotoSCF::one_step() {
                         vecCr_dum.tail(sizeC - 1).dot(Str.bottomRightCorner(sizeC - 1, sizeC - 1) * vecCr_dum.tail(sizeC - 1)));
                 }
                 temp.minCoeff(&itC);
-                std::cout << " Iterator to the matching norm of C: " << itC;
-                std::cout << "\n and it's energy: " << es.eigenvalues()[itC] << "\n\n";
                 break;
         }
+        std::cout << " Iterator to the matching state of C: " << itC
+                  << " \n and it's enegry: " << es.eigenvalues()[itC] << "\n\n";
         vecCr_dum = es.eigenvectors().col(itC) / es.eigenvectors()(0, itC);
     }
 
@@ -254,13 +263,21 @@ PhotoSCF::status PhotoSCF::one_step() {
         std::cout << "\n";
 
         switch (selection) {
+
             case selection_mth_t::by_energy:
                 temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 temp = temp.cwiseAbs2();
                 temp.minCoeff(&itI);
-                std::cout << " Iterator to the matching energy of I: " << itI
-                          << " \n and it's enegry: " << es.eigenvalues()[itI] << "\n\n";
+                break;
 
+            case selection_mth_t:by_enegry_above:
+                temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
+                for(int i = 0; i < temp.size(); ++i) {
+                    if(temp(i) > 0) {
+                        itI = i;
+                        break;
+                    }
+                }
                 break;
 
             case selection_mth_t::by_norm:
@@ -271,11 +288,10 @@ PhotoSCF::status PhotoSCF::one_step() {
                     temp(i) = std::norm(vecIrs.dot(Snk * vecIr_dum));
                 }
                 temp.maxCoeff(&itI);
-                std::cout << " Iterator to the matching norm of I: " << itI;
-                std::cout << "\n and it's energy: " << es.eigenvalues()[itI] << "\n\n";
-
                 break;
         }
+        std::cout << " Iterator to the matching state of I: " << itI;
+        std::cout << "\n and it's energy: " << es.eigenvalues()[itI] << "\n\n";
 
         vecIr_dum = es.eigenvectors().col(itI);
         vecIr_dum /= sqrt(real(vecIr_dum.dot(Snk * vecIr_dum)));
