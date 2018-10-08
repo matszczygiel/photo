@@ -212,7 +212,7 @@ PhotoSCF::status PhotoSCF::one_step() {
         Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXcd> es(AmatC, SmatC);
         if (es.info() != Success)
             std::cout << "!!!!! eigenslover failure!!!!!\n";
-        int itC;
+        int itC = 0;
         VectorXd temp;
         int sizeC = AmatC.cols();
 
@@ -226,7 +226,7 @@ PhotoSCF::status PhotoSCF::one_step() {
                 temp.minCoeff(&itC);
                 break;
 
-            case selection_mth_t:by_enegry_above:
+            case selection_mth_t::by_enegry_above:
                 temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 for(int i = 0; i < temp.size(); ++i) {
                     if(temp(i) > 0) {
@@ -256,7 +256,7 @@ PhotoSCF::status PhotoSCF::one_step() {
         if (es.info() != Success)
             std::cout << "!!!!! eigenslover failure!!!!!\n";
         VectorXd temp;
-        int itI;
+        int itI = 0;
 
         std::cout << " I eigenvalues:\n";
         std::cout << es.eigenvalues();
@@ -270,7 +270,7 @@ PhotoSCF::status PhotoSCF::one_step() {
                 temp.minCoeff(&itI);
                 break;
 
-            case selection_mth_t:by_enegry_above:
+            case selection_mth_t::by_enegry_above:
                 temp = es.eigenvalues() - energy * VectorXd::Ones(es.eigenvalues().size());
                 for(int i = 0; i < temp.size(); ++i) {
                     if(temp(i) > 0) {
