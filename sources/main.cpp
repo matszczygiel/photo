@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
     vector<int> indices;
     vector<double> kvals;
     for (int i = 0; i < energies_ion.size(); ++i) {
-        if (energies_ion(i) < en_final) {
+        if (energies_ion(i) < en_final && energies_ion(i) < 0) {
             indices.push_back(i);
             kvals.push_back(sqrt(2. * (en_final - energies_ion(i))));
         } else
@@ -160,20 +160,57 @@ int main(int argc, char *argv[]) {
             auto orbs_i     = reader.load_HFv(orbs_i_s);
             VectorXd grHF   = orbs_i.col(0);
 
-            complex<double> S_kI  = vecC.dot(S.leftCols(bnkl) * grHF);
-            complex<double> S_pI  = veci.dot(Snk * grHF);
-            complex<double> Dx_pI = veci.dot(Dxnk * grHF);
-            complex<double> Dy_pI = veci.dot(Dynk * grHF);
-            complex<double> Dz_pI = veci.dot(Dznk * grHF);
-            complex<double> Dx_kI = vecC.dot(Dx.leftCols(bnkl) * grHF);
-            complex<double> Dy_kI = vecC.dot(Dy.leftCols(bnkl) * grHF);
-            complex<double> Dz_kI = vecC.dot(Dz.leftCols(bnkl) * grHF);
-
+            // Dipole moment
             Vector3cd T;
-            T(0) = S_kI * Dx_pI + S_pI * Dx_kI;
-            T(1) = S_kI * Dy_pI + S_pI * Dy_kI;
-            T(2) = S_kI * Dz_pI + S_pI * Dz_kI;
-            T *= sqrt(2.);
+
+            std::string arg = "CI_I";
+            bool use_ci;
+            char token = std::tolower(*data.first(arg).begin());
+            if (token == 'y')
+                use_ci = true;
+            else if (token == 'n')
+                use_ci = false;
+            else
+                throw std::runtime_error("Invalid argument for" + arg + ".");
+
+            if (!use_ci) {
+                complex<double> S_kI  = vecC.dot(S.leftCols(bnkl) * grHF);
+                complex<double> S_pI  = veci.dot(Snk * grHF);
+                complex<double> Dx_pI = veci.dot(Dxnk * grHF);
+                complex<double> Dy_pI = veci.dot(Dynk * grHF);
+                complex<double> Dz_pI = veci.dot(Dznk * grHF);
+                complex<double> Dx_kI = vecC.dot(Dx.leftCols(bnkl) * grHF);
+                complex<double> Dy_kI = vecC.dot(Dy.leftCols(bnkl) * grHF);
+                complex<double> Dz_kI = vecC.dot(Dz.leftCols(bnkl) * grHF);
+
+                T(0) = S_kI * Dx_pI + S_pI * Dx_kI;
+                T(1) = S_kI * Dy_pI + S_pI * Dy_kI;
+                T(2) = S_kI * Dz_pI + S_pI * Dz_kI;
+                T *= sqrt(2.);
+            } else {
+                string ci_file = data.first("PATH_IN") + data.first("FILE_CI");
+                auto CI = reader.load_CI(ci_file);
+                MatrixXcd T_ij_x, T_ij_y, T_ij_z;
+                T_ij_x = (vecC.adjoint() * Dx.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
+                T_ij_x += (veci.adjoint() * Dxnk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
+                T_ij_x = orbs_i.transpose() * T_ij_x * orbs_i;
+                T_ij_x.transposeInPlace();
+
+                T_ij_y = (vecC.adjoint() * Dy.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
+                T_ij_y += (veci.adjoint() * Dynk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
+                T_ij_y = orbs_i.transpose() * T_ij_y * orbs_i;
+                T_ij_y.transposeInPlace();
+
+                T_ij_z = (vecC.adjoint() * Dz.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
+                T_ij_z += (veci.adjoint() * Dznk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
+                T_ij_z = orbs_i.transpose() * T_ij_z * orbs_i;
+                T_ij_z.transposeInPlace();
+
+                T(0) = (CI * T_ij_x).trace();
+                T(1) = (CI * T_ij_y).trace();
+                T(2) = (CI * T_ij_z).trace();
+                T /= sqrt(2.);                
+            }
 
             //normalize to energy scale
             T *= sqrt(kvals[k]);
@@ -186,13 +223,13 @@ int main(int argc, char *argv[]) {
             j(1) = sin(ptheta) * sin(pphi);
             j(2) = cos(ptheta);
 
- /*           double r_pI_sqrt, r_kI_sqrt;
+            /*           double r_pI_sqrt, r_kI_sqrt;
 
             r_pI_sqrt = norm(Dx_pI) + norm(Dy_pI) + norm(Dz_pI);
             r_kI_sqrt = norm(Dx_kI) + norm(Dy_kI) + norm(Dz_kI);
 */
             auto S_pk = vecI.dot(S * vecC);
-/*
+            /*
             cout << "\n"
                  << " S_pk : " << S_pk << "\n\n";
 
@@ -226,12 +263,10 @@ int main(int argc, char *argv[]) {
 
             //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
 
-
-
             // keep this for He
-            sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
+            // sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
 
-            //sigma.at(i).at(k) += dsigma(photon, j, T);
+            sigma.at(i).at(k) += dsigma(photon, j, T);
 
             cout << " To state:            " << fixed << indices[k] << "\n";
             cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
@@ -322,35 +357,8 @@ int main(int argc, char *argv[]) {
         auto HF_energies = get_HF_energies(jc.getFileHFEnergy(), bnkl);
 
         cout << " CI energy: " << En_CI << "\n";
+*/
 
-        // Dipole moment
-        MatrixXcd T_ij_x, T_ij_y, T_ij_z;
-        T_ij_x = (vecC.adjoint() * Dx.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
-        T_ij_x += (veci.adjoint() * Dxnk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
-        T_ij_x = HF.transpose() * T_ij_x * HF;
-        T_ij_x += T_ij_x.transpose().eval();
-
-        T_ij_y = (vecC.adjoint() * Dy.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
-        T_ij_y += (veci.adjoint() * Dynk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
-        T_ij_y = HF.transpose() * T_ij_y * HF;
-        T_ij_y += T_ij_y.transpose().eval();
-
-        T_ij_z = (vecC.adjoint() * Dz.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
-        T_ij_z += (veci.adjoint() * Dznk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
-        T_ij_z = HF.transpose() * T_ij_z * HF;
-        T_ij_z += T_ij_z.transpose().eval();
-
-        Vector3cd T;
-        T(0) = (CI * T_ij_x).trace();
-        T(1) = (CI * T_ij_y).trace();
-        T(2) = (CI * T_ij_z).trace();
-
-        factor = T.squaredNorm();
-        factor /= 4.;
-        sig = Sigma(jc.getK(), factor, jc.getIB());
-
-        cout << " CI sigma: " << sig << "\n";
-        */
     // successful exit
     auto end = chrono::system_clock::now();
 
