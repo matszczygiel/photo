@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
                 T(0) = (CI * T_ij_x).trace();
                 T(1) = (CI * T_ij_y).trace();
                 T(2) = (CI * T_ij_z).trace();
-                T /= sqrt(2.);                
+                T *= sqrt(2.);                
             }
 
             //normalize to energy scale
