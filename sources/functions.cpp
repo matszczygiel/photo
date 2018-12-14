@@ -13,12 +13,6 @@
 
 using namespace std;
 
-double Energy(const double k, const double ionization_pot) {
-    double energy_ion = -2.8616175470;
-    double res        = energy_ion + k * k * 0.5 + ionization_pot;
-    return res;
-}
-
 double dsigma(const double& photon, const Eigen::Vector3d& polarization, const Eigen::Vector3cd& dipole) {
     double pre_fct  = 4. * M_PI * M_PI * photon / speed_of_light;
     double post_fct = std::norm(polarization.dot(dipole));

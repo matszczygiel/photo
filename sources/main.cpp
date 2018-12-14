@@ -67,9 +67,9 @@ int main(int argc, char *argv[]) {
     auto en_i = std::stof(data.first("ENERGY_I_STATE"));
     en_i -= 1. / std::stof(data.first("R"));
 
-    double photon = std::stof(data.first("PHOTON_EN")) / 27.211385;
+    const double photon = std::stof(data.first("PHOTON_EN")) / au_to_ev;
 
-    double en_final = en_i + photon;
+    const double en_final = en_i + photon;
 
     vector<int> indices;
     vector<double> kvals;
@@ -264,9 +264,10 @@ int main(int argc, char *argv[]) {
             //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
 
             // keep this for He
-            // sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
+            sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
 
-            sigma.at(i).at(k) += dsigma(photon, j, T);
+            //keep this for H2
+            //sigma.at(i).at(k) += dsigma(photon, j, T);
 
             cout << " To state:            " << fixed << indices[k] << "\n";
             cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
