@@ -209,7 +209,7 @@ int Gamess::pos_change_gamess(const int &l, const int &pos)
             throw std::runtime_error("Error in pos_change!");
         }
     default: // higher L not supported in Gamess
-        throw std::runtime_error("Error in pos_change!");
+        return pos;
     };
 }
 

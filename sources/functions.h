@@ -17,8 +17,6 @@ inline type scalar_prod(const Eigen::Matrix<type, Eigen::Dynamic, 1>& vec1,
     return vec1.dot(kernel * vec2);
 }
 
-double energy(const double& k, const double& ionization_pot);
-
 double dsigma(const double& photon, const Eigen::Vector3d& polarization,const Eigen::Vector3cd& dipole );
 
 double sigma_tot_spherical_symetry(const double& photon, const Eigen::Vector3cd& dipole);
