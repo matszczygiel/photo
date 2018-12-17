@@ -119,6 +119,9 @@ int main(int argc, char *argv[]) {
     double phi = std::stof(data.first("K_PHI"));
     vector<vector<double>> sigma(job_size, vector<double>(kvals.size(), 0.));
 
+    std::string arg_gauge = "GAUGE";
+    std::string gauge     = std::tolower(data.first(arg_gauge));
+
     for (int k = 0; k < static_cast<int>(kvals.size()); ++k) {
         for (int i = 0; i < job_size; ++i) {
             Vector3d kvec;
@@ -145,9 +148,18 @@ int main(int argc, char *argv[]) {
 
             auto veci = vecI.head(bnkl);
 
-            auto Dx = reader.load_Dipx(ints_files.at(i));
-            auto Dy = reader.load_Dipy(ints_files.at(i));
-            auto Dz = reader.load_Dipz(ints_files.at(i));
+            MatrixXcd Dx, Dy, Dz;
+            if (gauge == "dipole") {
+                Dx = reader.load_Dipx(ints_files.at(i));
+                Dy = reader.load_Dipy(ints_files.at(i));
+                Dz = reader.load_Dipz(ints_files.at(i));
+            } else if (gauge == "velocity") {
+                Dx = reader.load_Gradx(ints_files.at(i)) / photon;
+                Dy = reader.load_Grady(ints_files.at(i)) / photon;
+                Dz = reader.load_Gradz(ints_files.at(i)) / photon;
+            }
+            else
+                throw std::runtime_error("Invalid argument for GAUGE.")
 
             auto S   = reader.load_S(ints_files.at(i));
             auto Snk = S.topLeftCorner(bnkl, bnkl);
@@ -189,7 +201,7 @@ int main(int argc, char *argv[]) {
                 T *= sqrt(2.);
             } else {
                 string ci_file = data.first("PATH_IN") + data.first("FILE_CI");
-                auto CI = reader.load_CI(ci_file);
+                auto CI        = reader.load_CI(ci_file);
                 MatrixXcd T_ij_x, T_ij_y, T_ij_z;
                 T_ij_x = (vecC.adjoint() * Dx.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
                 T_ij_x += (veci.adjoint() * Dxnk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
@@ -209,7 +221,7 @@ int main(int argc, char *argv[]) {
                 T(0) = (CI * T_ij_x).trace();
                 T(1) = (CI * T_ij_y).trace();
                 T(2) = (CI * T_ij_z).trace();
-                T /= sqrt(2.);                
+                T /= sqrt(2.);
             }
 
             //normalize to energy scale
