@@ -193,23 +193,23 @@ int main(int argc, char *argv[]) {
                 MatrixXcd T_ij_x, T_ij_y, T_ij_z;
                 T_ij_x = (vecC.adjoint() * Dx.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
                 T_ij_x += (veci.adjoint() * Dxnk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
-                T_ij_x = orbs_i.transpose() * T_ij_x * orbs_i;
-                T_ij_x.transposeInPlace();
+                T_ij_x = (orbs_i.transpose() * T_ij_x * orbs_i).eval();
+                T_ij_x += T_ij_x.transpose().eval();
 
                 T_ij_y = (vecC.adjoint() * Dy.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
                 T_ij_y += (veci.adjoint() * Dynk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
-                T_ij_y = orbs_i.transpose() * T_ij_y * orbs_i;
-                T_ij_y.transposeInPlace();
+                T_ij_y = (orbs_i.transpose() * T_ij_y * orbs_i).eval();
+                T_ij_y += T_ij_y.transpose().eval();
 
                 T_ij_z = (vecC.adjoint() * Dz.leftCols(bnkl)).transpose() * (veci.adjoint() * Snk);
                 T_ij_z += (veci.adjoint() * Dznk).transpose() * (vecC.adjoint() * S.leftCols(bnkl));
-                T_ij_z = orbs_i.transpose() * T_ij_z * orbs_i;
-                T_ij_z.transposeInPlace();
+                T_ij_z = (orbs_i.transpose() * T_ij_z * orbs_i).eval();
+                T_ij_z += T_ij_z.transpose().eval();
 
                 T(0) = (CI * T_ij_x).trace();
                 T(1) = (CI * T_ij_y).trace();
                 T(2) = (CI * T_ij_z).trace();
-                T *= sqrt(2.);                
+                T /= sqrt(2.);                
             }
 
             //normalize to energy scale
