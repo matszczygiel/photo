@@ -119,8 +119,8 @@ int main(int argc, char *argv[]) {
     double phi = std::stof(data.first("K_PHI"));
     vector<vector<double>> sigma(job_size, vector<double>(kvals.size(), 0.));
 
-    std::string arg_gauge = "GAUGE";
-    std::string gauge     = std::tolower(data.first(arg_gauge));
+    std::string gauge = data.first("GAUGE");
+    std::transform(gauge.begin(), gauge.end(), gauge.begin(), ::tolower);
 
     for (int k = 0; k < static_cast<int>(kvals.size()); ++k) {
         for (int i = 0; i < job_size; ++i) {
@@ -157,9 +157,8 @@ int main(int argc, char *argv[]) {
                 Dx = reader.load_Gradx(ints_files.at(i)) / photon;
                 Dy = reader.load_Grady(ints_files.at(i)) / photon;
                 Dz = reader.load_Gradz(ints_files.at(i)) / photon;
-            }
-            else
-                throw std::runtime_error("Invalid argument for GAUGE.")
+            } else
+                throw std::runtime_error("Invalid argument for GAUGE.");
 
             auto S   = reader.load_S(ints_files.at(i));
             auto Snk = S.topLeftCorner(bnkl, bnkl);
