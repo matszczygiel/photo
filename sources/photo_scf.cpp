@@ -168,10 +168,10 @@ PhotoSCF::status PhotoSCF::one_step() {
 
     /// Compose the set of equation of form Ax=ESx
 
-    MatrixXcd kRk = kRk_future.get().topLeftCorner(bnkl, bnkl);
-    MatrixXcd kkR = kkR_future.get().topLeftCorner(bnkl, bnkl);
-    MatrixXcd ppR = ppR_future.get();
-    MatrixXcd pRp = pRp_future.get();
+    const MatrixXcd kRk = kRk_future.get().topLeftCorner(bnkl, bnkl);
+    const MatrixXcd kkR = kkR_future.get().topLeftCorner(bnkl, bnkl);
+    const MatrixXcd ppR = ppR_future.get();
+    const MatrixXcd pRp = pRp_future.get();
 
     //A matrices prep
 
@@ -200,13 +200,14 @@ PhotoSCF::status PhotoSCF::one_step() {
     VectorXcd vecIr_dum, vecCr_dum;
 
        // compose the set Ax = b of overdetermined equations
-/*    MatrixXcd A = AmatC.leftCols(bnkl) - energy * SmatC.leftCols(bnkl);
+       /*
+    MatrixXcd A = AmatC.leftCols(bnkl) - energy * SmatC.leftCols(bnkl);
     VectorXcd b = (-AmatC.rightCols(bkl) + energy * SmatC.rightCols(bkl)) * vecC.tail(bkl);
     vecCr_dum = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
-*/
 
-    AmatC = U.adjoint() * AmatC * U;
-    SmatC = U.adjoint() * SmatC * U;
+*/
+    AmatC = (U.adjoint() * AmatC * U).eval();
+    SmatC = (U.adjoint() * SmatC * U).eval();
 
     if (evalC) {
         Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXcd> es(AmatC, SmatC);
