@@ -274,16 +274,16 @@ int main(int argc, char *argv[]) {
             //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
 
             // keep this for He
-            //sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
+            sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
 
             //keep this for H2
-            sigma.at(i).at(k) += dsigma(photon, j, T);
+            //sigma.at(i).at(k) += dsigma(photon, j, T);
             sigma_javg.at(i).at(k) += dsigma_javerage(photon, T);
 
             cout << " To state:                   " << fixed << indices[k] << "\n";
             cout << " Photon energy [eV]:         " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
             cout << " Cross section :             " << fixed << setprecision(4) << sigma.at(i).at(k) << "\n";
-            cout << " Cross section (j avg):      " << fixed << setprecision(4) << sigma_javg.at(i).at(k) << "\n";
+            //cout << " Cross section (j avg):      " << fixed << setprecision(4) << sigma_javg.at(i).at(k) << "\n";
             cout << " \n\n\n";
         }
     }
@@ -315,7 +315,7 @@ int main(int argc, char *argv[]) {
         outfile << "k(theta)";
         for (const auto &x : indices)
             outfile << "\t" << x << "\t";
-        outfile << "\ttot sigma\ttot sigma (javg)\n";
+        outfile << "\ttot sigma\n";
         for (int i = 0; i < job_size; ++i) {
             double sig_tot = 0;
             outfile << std::setprecision(3) << theta.at(i) << "\t\t";
@@ -323,12 +323,7 @@ int main(int argc, char *argv[]) {
                 outfile << std::setprecision(5) << x << "\t\t";
                 sig_tot += x;
             }
-            double sig_tot_javg = 0;
             outfile << std::setprecision(5) << sig_tot << "\t\t";
-            for (const auto &x : sigma_javg.at(i)) {
-                sig_tot_javg += x;
-            }
-            outfile << std::setprecision(5) << sig_tot_javg << "\n";
         }
         outfile << "\n";
         outfile.close();
