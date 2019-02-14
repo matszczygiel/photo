@@ -36,7 +36,7 @@ using namespace std;
 using namespace Eigen;
 
 int main(int argc, char *argv[]) {
-    auto start = chrono::system_clock::now();
+    const auto start = chrono::system_clock::now();
 
     if (!(argc == 3 || argc == 2)) {
         cout << " Proper usage: ./photo <input name> <settings>\n";
@@ -54,15 +54,15 @@ int main(int argc, char *argv[]) {
 
     const Disk_reader reader(data);
 
-    string orbs_f = data.first("PATH_IN") + data.first("FILE_HF_F_VEC");
-    string enrg_f = data.first("PATH_IN") + data.first("FILE_HF_F_EN");
+    const string orbs_f = data.first("PATH_IN") + data.first("FILE_HF_F_VEC");
+    const string enrg_f = data.first("PATH_IN") + data.first("FILE_HF_F_EN");
 
     cout.precision(5);
 
     ////////////////////////////
 
-    auto orbitals_ion = reader.load_HFv(orbs_f);
-    auto energies_ion = reader.load_HFe(enrg_f);
+    const auto orbitals_ion = reader.load_HFv(orbs_f);
+    const auto energies_ion = reader.load_HFe(enrg_f);
 
     auto en_i = std::stof(data.first("ENERGY_I_STATE"));
     en_i -= 1. / std::stof(data.first("R"));
@@ -81,32 +81,31 @@ int main(int argc, char *argv[]) {
             break;
     }
 
-    cout << "K:  ";
-    for (auto &x : kvals) {
-        std::stringstream stream;
-        stream << std::fixed << std::setprecision(3) << x;
-        cout << stream.str() << "  ";
-    }
-    cout << "\n";
+    if (setting == "-dump") {
+        for (auto &x : kvals) {
+            std::stringstream stream;
+            stream << std::fixed << std::setprecision(3) << x;
+            cout << stream.str() << "  ";
+        }
+        cout << "\n";
 
-    if (setting == "-dump")
         return 0;
-
+    }
     ///////////////////////////////
 
     std::stringstream stream;
     stream << std::fixed << std::setprecision(3) << kvals[0];
     std::string k_str = stream.str();
 
-    auto lmax = std::stoi(data.first("MAX_L"));
+    const auto lmax = std::stoi(data.first("MAX_L"));
 
-    double ptheta = std::stof(data.first("POL_THETA"));
-    double pphi   = std::stof(data.first("POL_PHI"));
+    const double ptheta = std::stof(data.first("POL_THETA"));
+    const double pphi   = std::stof(data.first("POL_PHI"));
     /////////////
     vector<string> norm_files, ints_files, Rints_files;
     vector<double> theta;
 
-    int job_size = data.size("FILES_NORM") - 1;
+    const int job_size = data.size("FILES_NORM") - 1;
 
     for (int i = 0; i < job_size; ++i) {
         norm_files.push_back(data.first("PATH_IN") + data.first("FILES_NORM") + k_str + data("FILES_NORM", i + 1));
@@ -118,6 +117,7 @@ int main(int argc, char *argv[]) {
 
     double phi = std::stof(data.first("K_PHI"));
     vector<vector<double>> sigma(job_size, vector<double>(kvals.size(), 0.));
+    vector<vector<double>> sigma_javg(job_size, vector<double>(kvals.size(), 0.));
 
     std::string gauge = data.first("GAUGE");
     std::transform(gauge.begin(), gauge.end(), gauge.begin(), ::tolower);
@@ -129,9 +129,8 @@ int main(int argc, char *argv[]) {
             kvec(1) = kvals[k] * sin(theta.at(i)) * sin(phi);
             kvec(2) = kvals[k] * cos(theta.at(i));
 
-            auto norms = reader.load_norms(norm_files.at(i));
-
-            VectorXcd cont_vec = fetch_coulomb_wf(lmax, kvec, norms);
+            const auto norms    = reader.load_norms(norm_files.at(i));
+            const auto cont_vec = fetch_coulomb_wf(lmax, kvec, norms);
 
             //////////////////////
 
@@ -139,14 +138,14 @@ int main(int argc, char *argv[]) {
             sys.run(orbitals_ion.col(indices[k]), cont_vec);
             sys.free_ints();
 
-            auto vecI = sys.getI();
-            auto vecC = sys.getC();
+            const auto vecI = sys.getI();
+            const auto vecC = sys.getC();
 
-            auto bnkl = std::stoi(data.first("NUMBER_GTO"));
+            const auto bnkl = std::stoi(data.first("NUMBER_GTO"));
 
             //////////////////////////////////
 
-            auto veci = vecI.head(bnkl);
+            const auto veci = vecI.head(bnkl);
 
             MatrixXcd Dx, Dy, Dz;
             if (gauge == "dipole") {
@@ -160,16 +159,16 @@ int main(int argc, char *argv[]) {
             } else
                 throw std::runtime_error("Invalid argument for GAUGE.");
 
-            auto S   = reader.load_S(ints_files.at(i));
-            auto Snk = S.topLeftCorner(bnkl, bnkl);
+            const auto S   = reader.load_S(ints_files.at(i));
+            const auto Snk = S.topLeftCorner(bnkl, bnkl);
 
-            auto Dxnk = Dx.topLeftCorner(bnkl, bnkl);
-            auto Dynk = Dy.topLeftCorner(bnkl, bnkl);
-            auto Dznk = Dz.topLeftCorner(bnkl, bnkl);
+            const auto Dxnk = Dx.topLeftCorner(bnkl, bnkl);
+            const auto Dynk = Dy.topLeftCorner(bnkl, bnkl);
+            const auto Dznk = Dz.topLeftCorner(bnkl, bnkl);
 
-            string orbs_i_s = data.first("PATH_IN") + data.first("FILE_HF_I_VEC");
-            auto orbs_i     = reader.load_HFv(orbs_i_s);
-            VectorXd grHF   = orbs_i.col(0);
+            const string orbs_i_s = data.first("PATH_IN") + data.first("FILE_HF_I_VEC");
+            const auto orbs_i     = reader.load_HFv(orbs_i_s);
+            const VectorXd grHF   = orbs_i.col(0);
 
             // Dipole moment
             Vector3cd T;
@@ -275,14 +274,16 @@ int main(int argc, char *argv[]) {
             //  cout << " Electron repulsion energy: " << E_rep_corr << "\n\n";
 
             // keep this for He
-            sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
+            //sigma.at(i).at(k) += sigma_tot_spherical_symetry(photon, T);
 
             //keep this for H2
-            //sigma.at(i).at(k) += dsigma(photon, j, T);
+            sigma.at(i).at(k) += dsigma(photon, j, T);
+            sigma_javg.at(i).at(k) += dsigma_javerage(photon, T);
 
-            cout << " To state:            " << fixed << indices[k] << "\n";
-            cout << " Photon energy [eV]:  " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
-            cout << " Cross section :      " << fixed << setprecision(4) << sigma.at(i).at(k) << "\n";
+            cout << " To state:                   " << fixed << indices[k] << "\n";
+            cout << " Photon energy [eV]:         " << fixed << setprecision(3) << data.first("PHOTON_EN") << "\n";
+            cout << " Cross section :             " << fixed << setprecision(4) << sigma.at(i).at(k) << "\n";
+            cout << " Cross section (j avg):      " << fixed << setprecision(4) << sigma_javg.at(i).at(k) << "\n";
             cout << " \n\n\n";
         }
     }
@@ -314,7 +315,7 @@ int main(int argc, char *argv[]) {
         outfile << "k(theta)";
         for (const auto &x : indices)
             outfile << "\t" << x << "\t";
-        outfile << "\ttot sigma\n";
+        outfile << "\ttot sigma\ttot sigma (javg)\n";
         for (int i = 0; i < job_size; ++i) {
             double sig_tot = 0;
             outfile << std::setprecision(3) << theta.at(i) << "\t\t";
@@ -322,7 +323,12 @@ int main(int argc, char *argv[]) {
                 outfile << std::setprecision(5) << x << "\t\t";
                 sig_tot += x;
             }
-            outfile << std::setprecision(5) << sig_tot << "\n";
+            double sig_tot_javg = 0;
+            outfile << std::setprecision(5) << sig_tot << "\t\t";
+            for (const auto &x : sigma_javg.at(i)) {
+                sig_tot_javg += x;
+            }
+            outfile << std::setprecision(5) << sig_tot_javg << "\n";
         }
         outfile << "\n";
         outfile.close();

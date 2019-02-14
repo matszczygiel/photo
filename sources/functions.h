@@ -21,6 +21,8 @@ double dsigma(const double& photon, const Eigen::Vector3d& polarization,const Ei
 
 double sigma_tot_spherical_symetry(const double& photon, const Eigen::Vector3cd& dipole);
 
+double dsigma_javerage(const double& photon, const Eigen::Vector3cd& dipole);
+
 double photonEeV(const double k, const double ionization_pot);
 
 double k_length(const double energy_eV, const double ionization_pot);
