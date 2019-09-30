@@ -1,0 +1,33 @@
+COMPUTE_BOUND		N
+COMPUTE_CONTINUUM   	N
+
+ENERGY_I_STATE       -1.1693611879
+R                       1.0e+15
+PHOTON_EN 61.9
+
+PATH_IN      	        /home/mateusz/Documents/cpp/photo/data/dogPrz/
+FILES_1E		        ints/file1E_he_k      .F
+FILES_2E		        ints/file2E_he_k      .F
+FILES_NORM		        ints/norm1E_he_k      .F
+FILE_HF_I_VEC	        data/He_c.dat
+FILE_CI		            data/He_ci.dat
+FILE_HF_F_VEC           data/Hep_c.dat
+FILE_HF_F_EN            data/Hep_e.dat
+
+SELECTION_METHOD	energy
+GAUGE            velocity
+CI_I			N
+
+WRITE	    		Y
+PATH_OUT       /home/mateusz/Documents/cpp/photo/data/h2/bazy_mprzybytka/baza_2/res/outps/
+FILE_OUT         cNbN_vel_hf.out
+
+NUMBER_GTO       42
+NUMBER_PWGTO            84
+MAX_L                   6
+NAME                    przyb_d5Z
+K_THETA                 1.570796
+K_PHI                   0
+POL_THETA               1.570796
+POL_PHI                 0
+
