@@ -1,0 +1,33 @@
+COMPUTE_BOUND		N
+COMPUTE_CONTINUUM   	N
+
+ENERGY_I_STATE       -1.1335964328
+R                       1.4
+PHOTON_EN 22.5
+
+PATH_IN       /home/mateusz/Documents/cpp/photo/data/h2/bazy_mcc/aug-mcc-pV5Z/
+FILES_1E		ints/file1E_h2_k      _t0_R0.F  _t1_R0.F  _t2_R0.F  _t3_R0.F  _t4_R0.F  _t5_R0.F  _t6_R0.F  _t7_R0.F  _t8_R0.F  _t9_R0.F
+FILES_2E		ints/file2E_h2_k      _t0_R0.F  _t1_R0.F  _t2_R0.F  _t3_R0.F  _t4_R0.F  _t5_R0.F  _t6_R0.F  _t7_R0.F  _t8_R0.F  _t9_R0.F
+FILES_NORM		ints/norm1E_h2_k      _t0_R0.F  _t1_R0.F  _t2_R0.F  _t3_R0.F  _t4_R0.F  _t5_R0.F  _t6_R0.F  _t7_R0.F  _t8_R0.F  _t9_R0.F
+FILE_HF_I_VEC	        data/h2_R0_c.dat
+FILE_CI		            data/h2_R0_ci.dat
+FILE_HF_F_VEC           data/h2p_R0_c.dat
+FILE_HF_F_EN            data/h2p_R0_e.dat
+
+SELECTION_METHOD	energy
+GAUGE            velocity
+CI_I			Y
+
+WRITE	    		Y
+PATH_OUT       /home/mateusz/Documents/cpp/photo/data/h2/bazy_mcc/aug-mcc-pV5Z/res/outps/
+FILE_OUT         parallel_vel_hf_R0.out
+
+NUMBER_GTO       210
+NUMBER_PWGTO            84
+MAX_L                   6
+NAME   			        aug-mcc-pV5Z
+K_THETA                 0.000000  0.174533  0.349066  0.523599  0.698132  0.872665  1.047198  1.221730  1.396263  1.570796
+K_PHI                   0
+POL_THETA            0
+POL_PHI                 0
+
